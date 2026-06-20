@@ -78,6 +78,8 @@ function Dashboard() {
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link to="/dashboard" className="text-foreground">Accueil</Link>
             <Link to="/wallets" className="text-muted-foreground hover:text-foreground">Portefeuilles</Link>
+            <Link to="/cards" className="text-muted-foreground hover:text-foreground">Cartes</Link>
+            <Link to="/admin" className="text-muted-foreground hover:text-foreground">Admin</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
