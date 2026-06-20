@@ -44,6 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cards: {
+        Row: {
+          brand: string
+          card_number: string
+          created_at: string
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          holder_name: string
+          id: string
+          status: Database["public"]["Enums"]["card_status"]
+          tier: Database["public"]["Enums"]["card_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand?: string
+          card_number: string
+          created_at?: string
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          holder_name: string
+          id?: string
+          status?: Database["public"]["Enums"]["card_status"]
+          tier?: Database["public"]["Enums"]["card_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          card_number?: string
+          created_at?: string
+          cvv?: string
+          expiry_month?: number
+          expiry_year?: number
+          holder_name?: string
+          id?: string
+          status?: Database["public"]["Enums"]["card_status"]
+          tier?: Database["public"]["Enums"]["card_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           country: string | null
@@ -133,6 +178,81 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_clients: {
+        Args: never
+        Returns: {
+          card_id: string
+          card_last4: string
+          card_status: Database["public"]["Enums"]["card_status"]
+          card_tier: Database["public"]["Enums"]["card_tier"]
+          email: string
+          full_name: string
+          kyc_status: string
+          total_cad: number
+          user_id: string
+        }[]
+      }
+      admin_set_card_status: {
+        Args: {
+          _card_id: string
+          _status: Database["public"]["Enums"]["card_status"]
+        }
+        Returns: {
+          brand: string
+          card_number: string
+          created_at: string
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          holder_name: string
+          id: string
+          status: Database["public"]["Enums"]["card_status"]
+          tier: Database["public"]["Enums"]["card_tier"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_card_tier: {
+        Args: {
+          _card_id: string
+          _tier: Database["public"]["Enums"]["card_tier"]
+        }
+        Returns: {
+          brand: string
+          card_number: string
+          created_at: string
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          holder_name: string
+          id: string
+          status: Database["public"]["Enums"]["card_status"]
+          tier: Database["public"]["Enums"]["card_tier"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_admin_if_none: { Args: never; Returns: boolean }
+      generate_card_for_user: {
+        Args: {
+          _holder_name: string
+          _tier?: Database["public"]["Enums"]["card_tier"]
+          _user_id: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -140,9 +260,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_total_cad: { Args: { _user_id: string }; Returns: number }
     }
     Enums: {
       app_role: "client" | "compliance_officer" | "admin"
+      card_status: "active" | "blocked" | "expired"
+      card_tier: "standard" | "gold_plus"
       kyc_status: "pending" | "in_review" | "verified" | "rejected"
       wallet_currency: "CAD" | "EUR" | "USD"
     }
@@ -273,6 +396,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["client", "compliance_officer", "admin"],
+      card_status: ["active", "blocked", "expired"],
+      card_tier: ["standard", "gold_plus"],
       kyc_status: ["pending", "in_review", "verified", "rejected"],
       wallet_currency: ["CAD", "EUR", "USD"],
     },
