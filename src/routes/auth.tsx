@@ -50,7 +50,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
@@ -59,8 +59,13 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Compte créé. Bienvenue chez Valtis.");
-        navigate({ to: "/dashboard" });
+        if (signUpData.session) {
+          toast.success("Compte créé. Bienvenue chez Valtis.");
+          navigate({ to: "/dashboard" });
+        } else {
+          toast.success("Compte créé. Vérifiez votre e-mail pour confirmer.");
+          setMode("signin");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
