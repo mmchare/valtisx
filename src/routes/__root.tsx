@@ -91,6 +91,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Gestion de fortune, conformité bancaire et transferts haute sécurité pour le Canada et l'Europe." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Valtis — Banque privée nouvelle génération" },
+      { name: "twitter:description", content: "Gestion de fortune, conformité bancaire et transferts haute sécurité pour le Canada et l'Europe." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
     ],
     links: [
       {
