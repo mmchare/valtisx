@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ValtisLogo } from "@/components/valtis/logo";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -39,6 +40,21 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"credentials" | "otp">("credentials");
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  useEffect(() => {
+    setStep("credentials");
+    setOtp("");
+  }, [mode]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -65,21 +81,19 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        if (signUpData.session) {
-          toast.success("Compte créé. Bienvenue chez Valtis.");
-          navigate({ to: "/dashboard" });
-        } else {
-          toast.success("Compte créé. Vérifiez votre e-mail pour confirmer.");
-          setMode("signin");
-        }
+        toast.success("Code de vérification envoyé. (Démo : 123456)");
+        setResendIn(30);
+        setStep("otp");
+        void signUpData;
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
           password: parsed.data.password,
         });
         if (error) throw error;
-        toast.success("Connexion réussie.");
-        navigate({ to: "/dashboard" });
+        toast.success("Code de vérification envoyé. (Démo : 123456)");
+        setResendIn(30);
+        setStep("otp");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur d'authentification";
@@ -89,6 +103,31 @@ function AuthPage() {
     }
   }
 
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast.error("Saisissez les 6 chiffres du code.");
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 700));
+      if (otp !== "123456") {
+        toast.error("Code incorrect. (Démo : 123456)");
+        return;
+      }
+      toast.success(mode === "signup" ? "Inscription finalisée." : "Connexion réussie.");
+      navigate({ to: "/dashboard" });
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  function handleResend() {
+    if (resendIn > 0) return;
+    toast.success("Nouveau code envoyé. (Démo : 123456)");
+    setResendIn(30);
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -103,15 +142,23 @@ function AuthPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
             <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">
-              {mode === "signin" ? "Accès privé" : "Ouvrir un compte Valtis"}
+              {step === "otp"
+                ? "Vérification en deux étapes"
+                : mode === "signin"
+                ? "Accès privé"
+                : "Ouvrir un compte Valtis"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {mode === "signin" ? "Connectez-vous à votre espace bancaire." : "Quelques secondes pour commencer."}
+              {step === "otp"
+                ? `Entrez le code à 6 chiffres envoyé à ${email}.`
+                : mode === "signin"
+                ? "Connectez-vous à votre espace bancaire."
+                : "Quelques secondes pour commencer."}
             </p>
           </div>
 
           <div className="card-premium rounded-2xl p-8 space-y-5">
-
+            {step === "credentials" ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <div className="space-y-2">
@@ -132,7 +179,55 @@ function AuthPage() {
                 {mode === "signin" ? "Se connecter" : "Créer mon compte"}
               </Button>
             </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  Sécurisé par authentification à deux facteurs
+                </div>
+                <div className="flex justify-center py-2">
+                  <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <Button type="submit" variant="gold" className="w-full h-11" disabled={otpLoading || otp.length !== 6}>
+                  {otpLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Vérifier le code
+                </Button>
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("credentials");
+                      setOtp("");
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ← Modifier l'e-mail
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendIn > 0}
+                    className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {resendIn > 0 ? `Renvoyer dans ${resendIn}s` : "Renvoyer le code"}
+                  </button>
+                </div>
+              </form>
+            )}
 
+            {step === "credentials" && (
             <button
               type="button"
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
@@ -140,6 +235,7 @@ function AuthPage() {
             >
               {mode === "signin" ? "Pas encore client ? Ouvrir un compte" : "Déjà client ? Se connecter"}
             </button>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground text-center mt-6">
