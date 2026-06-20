@@ -26,8 +26,8 @@ function Index() {
             <a href="#conformite" className="hover:text-foreground transition">Conformité</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link to="/auth"><Button variant="ghost" size="sm">Se connecter</Button></Link>
-            <Link to="/auth"><Button variant="gold" size="sm">Ouvrir un compte</Button></Link>
+            <Link to="/auth" search={{ mode: "signin" }}><Button variant="ghost" size="sm">Se connecter</Button></Link>
+            <Link to="/auth" search={{ mode: "signup" }}><Button variant="gold" size="sm">Ouvrir un compte</Button></Link>
           </div>
         </div>
       </header>
@@ -47,7 +47,7 @@ function Index() {
           Conçu pour les patrimoines de 100 millions et plus.
         </p>
         <div className="flex flex-wrap justify-center gap-3 animate-fade-in-up">
-          <Link to="/auth">
+          <Link to="/auth" search={{ mode: "signup" }}>
             <Button variant="gold" size="lg" className="h-12 px-8 text-base">
               Ouvrir un compte Valtis
               <ArrowRight className="ml-1 w-4 h-4" />
