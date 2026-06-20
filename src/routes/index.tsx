@@ -40,7 +40,7 @@ function Index() {
         </div>
         <h1 className="font-display text-5xl md:text-7xl font-semibold tracking-tighter mb-6 animate-fade-in-up">
           La banque privée,<br />
-          <span className="text-gold-gradient">repensée pour la fortune.</span>
+          <span className="text-blue-gradient">repensée pour la fortune.</span>
         </h1>
         <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-10 animate-fade-in-up">
           Transferts haute performance, traçabilité absolue, conformité bancaire EDD intégrée.
