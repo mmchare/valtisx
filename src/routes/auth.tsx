@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,24 +89,6 @@ function AuthPage() {
     }
   }
 
-  async function handleGoogle() {
-    setLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/dashboard",
-      });
-      if (result.error) {
-        toast.error("Échec de la connexion Google");
-        setLoading(false);
-        return;
-      }
-      if (result.redirected) return;
-      navigate({ to: "/dashboard" });
-    } catch (err) {
-      toast.error("Erreur Google");
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -130,22 +111,6 @@ function AuthPage() {
           </div>
 
           <div className="card-premium rounded-2xl p-8 space-y-5">
-            <Button
-              type="button"
-              variant="ghost-gold"
-              className="w-full h-11"
-              onClick={handleGoogle}
-              disabled={loading}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.2h5.35c-.23 1.4-1.66 4.1-5.35 4.1-3.22 0-5.85-2.66-5.85-5.95s2.63-5.95 5.85-5.95c1.83 0 3.06.78 3.76 1.45l2.56-2.47C16.85 3.86 14.65 3 12 3 6.98 3 3 6.98 3 12s3.98 9 9 9c5.2 0 8.62-3.66 8.62-8.8 0-.6-.07-1.05-.17-1.5z"/></svg>
-              Continuer avec Google
-            </Button>
-
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex-1 h-px bg-border" />
-              <span className="uppercase tracking-widest">ou</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
