@@ -11,6 +11,9 @@ import { ValtisLogo } from "@/components/valtis/logo";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "signup" ? ("signup" as const) : ("signin" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Connexion · Valtis" },
@@ -28,7 +31,11 @@ const schema = z.object({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { mode: initialMode } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
