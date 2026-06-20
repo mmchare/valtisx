@@ -115,23 +115,23 @@ function Dashboard() {
           <h2 className="font-display text-xl mb-5 text-muted-foreground">Vos portefeuilles</h2>
           <div className="grid md:grid-cols-2 gap-5">
             {(wallets ?? []).map((w) => (
-              <div key={w.id} className="card-premium shimmer-gold rounded-2xl p-6 aspect-[2.2/1] flex flex-col justify-between animate-fade-in-up">
+              <div key={w.id} className={`${w.is_primary ? "card-premium shimmer-gold" : "card-soft"} rounded-2xl p-6 aspect-[2.2/1] flex flex-col justify-between animate-fade-in-up`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{w.label}</p>
-                    <p className="text-xs text-primary mt-1">{w.currency}</p>
+                    <p className={`text-xs uppercase tracking-[0.25em] ${w.is_primary ? "text-white/60" : "text-muted-foreground"}`}>{w.label}</p>
+                    <p className={`text-xs mt-1 ${w.is_primary ? "text-gold-gradient" : "text-primary"}`}>{w.currency}</p>
                   </div>
                   {w.is_primary && (
-                    <span className="text-[10px] uppercase tracking-widest border border-gold px-2 py-0.5 rounded-full text-primary">
-                      Principal
+                    <span className="text-[10px] uppercase tracking-widest border border-gold px-2 py-0.5 rounded-full text-gold-gradient">
+                      Gold Plus
                     </span>
                   )}
                 </div>
                 <div>
-                  <p className="font-display text-3xl font-semibold text-foreground">
+                  <p className={`font-display text-3xl font-semibold ${w.is_primary ? "text-white" : "text-foreground"}`}>
                     {formatAmount(Number(w.balance), w.currency, ghost)}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 tracking-wider">
+                  <p className={`text-xs mt-1 tracking-wider ${w.is_primary ? "text-white/50" : "text-muted-foreground"}`}>
                     •••• •••• •••• {w.id.slice(-4).toUpperCase()}
                   </p>
                 </div>
