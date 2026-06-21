@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check } from "lucide-react";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -26,6 +27,22 @@ type Wallet = {
 };
 type Profile = { full_name: string | null; email: string; kyc_status: string };
 
+type StepStatus = "pending" | "running" | "done" | "blocked";
+type VerifStep = { key: string; label: string; pct: number; status: StepStatus };
+
+const BASE_STEPS: Omit<VerifStep, "status">[] = [
+  { key: "auth", label: "Authentification renforcée du donneur d'ordre", pct: 12 },
+  { key: "wallet", label: "Vérification du portefeuille source", pct: 25 },
+  { key: "aml", label: "Contrôle anti-blanchiment (AML / CFT)", pct: 38 },
+  { key: "benef", label: "Validation du bénéficiaire & sanctions", pct: 50 },
+  { key: "edd", label: "Conformité approfondie (EDD)", pct: 63 },
+  { key: "reserve", label: "Réservation des fonds", pct: 75 },
+  { key: "route", label: "Routage SWIFT / SEPA", pct: 88 },
+  { key: "confirm", label: "Confirmation finale", pct: 100 },
+];
+
+const COMPLIANCE_CODE = "VALTIS-2026";
+
 function Dashboard() {
   const navigate = useNavigate();
   const { ghost, toggle } = useGhostMode();
@@ -37,7 +54,13 @@ function Dashboard() {
   const [transferTo, setTransferTo] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferRef, setTransferRef] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  // Verification simulation state
+  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "success">("form");
+  const [steps, setSteps] = useState<VerifStep[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [blockReason, setBlockReason] = useState<string | null>(null);
+  const [unlockCode, setUnlockCode] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -103,10 +126,65 @@ function Dashboard() {
     setTransferTo("");
     setTransferAmount("");
     setTransferRef("");
+    setPhase("form");
+    setSteps([]);
+    setProgress(0);
+    setBlockReason(null);
+    setUnlockCode("");
     setTransferOpen(true);
   }
 
-  async function submitTransfer(e: React.FormEvent) {
+  function evaluateBlockReason(amount: number, recipient: string, kyc: string): string | null {
+    if (kyc !== "approved" && kyc !== "verified") {
+      return "Votre dossier KYC n'est pas encore approuvé par notre cellule conformité. Une vérification renforcée est requise avant tout virement sortant.";
+    }
+    const r = recipient.trim();
+    const isTag = r.startsWith("@") && r.length >= 3;
+    const isIban = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/i.test(r.replace(/\s+/g, ""));
+    if (!isTag && !isIban) {
+      return "Le bénéficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrôle sanctions et listes PEP a échoué.";
+    }
+    if (amount >= 10000) {
+      return "Virement à montant élevé (≥ 10 000). Un code de déblocage conformité (EDD) est obligatoire — contactez votre gestionnaire dédié.";
+    }
+    return null;
+  }
+
+  async function runVerification(reason: string | null) {
+    // Build fresh step list
+    const list: VerifStep[] = BASE_STEPS.map((s) => ({ ...s, status: "pending" }));
+    setSteps(list);
+    setProgress(0);
+
+    for (let i = 0; i < list.length; i++) {
+      // mark running
+      list[i] = { ...list[i], status: "running" };
+      setSteps([...list]);
+      // animate progress towards this step's pct
+      const prevPct = i === 0 ? 0 : list[i - 1].pct;
+      const targetPct = list[i].pct;
+      const ticks = 14;
+      for (let t = 1; t <= ticks; t++) {
+        await new Promise((r) => setTimeout(r, 55));
+        setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
+      }
+      // EDD gate at 63%
+      if (list[i].key === "edd" && reason) {
+        list[i] = { ...list[i], status: "blocked" };
+        setSteps([...list]);
+        setProgress(63);
+        setBlockReason(reason);
+        setPhase("blocked");
+        return;
+      }
+      list[i] = { ...list[i], status: "done" };
+      setSteps([...list]);
+    }
+    setProgress(100);
+    setPhase("success");
+  }
+
+  function startTransfer(e: React.FormEvent) {
     e.preventDefault();
     const amount = parseFloat(transferAmount);
     if (!transferFrom) return toast.error("Sélectionnez un portefeuille");
@@ -115,13 +193,56 @@ function Dashboard() {
     const w = (wallets ?? []).find((x) => x.id === transferFrom);
     if (!w) return toast.error("Portefeuille introuvable");
     if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSubmitting(false);
+    const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
+    setPhase("verifying");
+    void runVerification(reason);
+  }
+
+  async function submitUnlock() {
+    setUnlocking(true);
+    await new Promise((r) => setTimeout(r, 700));
+    if (unlockCode.trim().toUpperCase() !== COMPLIANCE_CODE) {
+      setUnlocking(false);
+      toast.error("Code de déblocage invalide", { description: "Contactez votre gestionnaire dédié." });
+      return;
+    }
+    setUnlocking(false);
+    // Resume from EDD step
+    const list = steps.map((s) =>
+      s.key === "edd" ? { ...s, status: "done" as StepStatus } : s,
+    );
+    setSteps(list);
+    setBlockReason(null);
+    setPhase("verifying");
+    // continue remaining steps
+    const remaining = BASE_STEPS.findIndex((s) => s.key === "edd") + 1;
+    const tail: VerifStep[] = [...list];
+    for (let i = remaining; i < tail.length; i++) {
+      tail[i] = { ...tail[i], status: "running" };
+      setSteps([...tail]);
+      const prevPct = tail[i - 1].pct;
+      const targetPct = tail[i].pct;
+      const ticks = 14;
+      for (let t = 1; t <= ticks; t++) {
+        await new Promise((r) => setTimeout(r, 55));
+        setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
+      }
+      tail[i] = { ...tail[i], status: "done" };
+      setSteps([...tail]);
+    }
+    setProgress(100);
+    setPhase("success");
+  }
+
+  function closeTransferDialog() {
     setTransferOpen(false);
-    toast.success(`Transfert de ${amount.toLocaleString("fr-CA")} ${w.currency} initié vers ${transferTo}`, {
-      description: "Une confirmation vous sera envoyée par la cellule conformité.",
-    });
+    if (phase === "success") {
+      const w = (wallets ?? []).find((x) => x.id === transferFrom);
+      toast.success(
+        `Transfert de ${parseFloat(transferAmount).toLocaleString("fr-CA")} ${w?.currency ?? ""} confirmé vers ${transferTo}`,
+        { description: "Reçu disponible dans votre historique conformité." },
+      );
+    }
   }
 
   return (
@@ -253,13 +374,25 @@ function Dashboard() {
         </section>
       </main>
 
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+      <Dialog open={transferOpen} onOpenChange={(o) => (o ? setTransferOpen(true) : closeTransferDialog())}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Nouveau transfert</DialogTitle>
-            <DialogDescription>Envoyez des fonds vers un autre client Valtis ou un IBAN.</DialogDescription>
+            <DialogTitle className="font-display">
+              {phase === "form" && "Nouveau transfert"}
+              {phase === "verifying" && "Vérification en cours"}
+              {phase === "blocked" && "Transfert suspendu"}
+              {phase === "success" && "Transfert confirmé"}
+            </DialogTitle>
+            <DialogDescription>
+              {phase === "form" && "Envoyez des fonds vers un autre client Valtis ou un IBAN."}
+              {phase === "verifying" && "Notre moteur conformité valide chaque étape en temps réel."}
+              {phase === "blocked" && "Une étape de conformité requiert votre attention."}
+              {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={submitTransfer} className="space-y-4">
+
+          {phase === "form" && (
+          <form onSubmit={startTransfer} className="space-y-4">
             <div className="space-y-2">
               <Label>Depuis</Label>
               <Select value={transferFrom} onValueChange={setTransferFrom}>
@@ -286,12 +419,86 @@ function Dashboard() {
               <Input id="ref" placeholder="Motif du virement" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setTransferOpen(false)}>Annuler</Button>
-              <Button type="submit" variant="gold" disabled={submitting}>
-                {submitting ? "Envoi…" : "Confirmer"}
-              </Button>
+              <Button type="button" variant="ghost" onClick={closeTransferDialog}>Annuler</Button>
+              <Button type="submit" variant="gold">Lancer la vérification</Button>
             </DialogFooter>
           </form>
+          )}
+
+          {(phase === "verifying" || phase === "blocked" || phase === "success") && (
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-xs mb-2">
+                  <span className="text-muted-foreground">Progression conformité</span>
+                  <span className={phase === "blocked" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+                <Progress value={progress} className={phase === "blocked" ? "[&>div]:bg-destructive" : ""} />
+              </div>
+              <ul className="space-y-2">
+                {steps.map((s) => (
+                  <li key={s.key} className="flex items-center gap-3 text-sm">
+                    <span className="w-5 h-5 flex items-center justify-center">
+                      {s.status === "done" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                      {s.status === "running" && <Loader2 className="w-4 h-4 animate-spin text-gold" />}
+                      {s.status === "blocked" && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                      {s.status === "pending" && <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />}
+                    </span>
+                    <span className={s.status === "pending" ? "text-muted-foreground" : "text-foreground"}>
+                      {s.label}
+                    </span>
+                    <span className="ml-auto text-[11px] text-muted-foreground">{s.pct}%</span>
+                  </li>
+                ))}
+              </ul>
+
+              {phase === "blocked" && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 space-y-3">
+                  <div className="flex gap-2 items-start">
+                    <Lock className="w-4 h-4 text-destructive mt-0.5" />
+                    <p className="text-sm text-destructive">{blockReason}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unlock" className="text-xs">Code de déblocage conformité</Label>
+                    <Input
+                      id="unlock"
+                      placeholder="VALTIS-XXXX"
+                      value={unlockCode}
+                      onChange={(e) => setUnlockCode(e.target.value)}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Ce code vous est transmis par votre gestionnaire après revue du dossier EDD.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="gold" size="sm" onClick={submitUnlock} disabled={unlocking || !unlockCode}>
+                      {unlocking ? "Vérification…" : "Débloquer"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {phase === "success" && (
+                <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm flex gap-2 items-start">
+                  <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium">Virement exécuté</p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Référence : VLT-{Date.now().toString(36).toUpperCase()} — fonds routés vers {transferTo}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {phase === "success" && (
+                <DialogFooter>
+                  <Button variant="gold" onClick={closeTransferDialog}>Fermer</Button>
+                </DialogFooter>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
