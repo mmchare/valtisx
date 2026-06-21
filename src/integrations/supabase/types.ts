@@ -244,6 +244,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      card_history: {
+        Args: { _card_id: string }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_id: string
+          created_at: string
+          id: string
+          metadata: Json
+        }[]
+      }
       claim_admin_if_none: { Args: never; Returns: boolean }
       generate_card_for_user: {
         Args: {

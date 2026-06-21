@@ -17,6 +17,7 @@ import { Route as AuthenticatedWalletsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCardsRouteImport } from './routes/_authenticated/cards'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedCardsCardIdRouteImport } from './routes/_authenticated/cards.$cardId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -57,24 +58,32 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCardsCardIdRoute =
+  AuthenticatedCardsCardIdRouteImport.update({
+    id: '/$cardId',
+    path: '/$cardId',
+    getParentRoute: () => AuthenticatedCardsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/cards': typeof AuthenticatedCardsRoute
+  '/cards': typeof AuthenticatedCardsRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/wallets': typeof AuthenticatedWalletsRoute
+  '/cards/$cardId': typeof AuthenticatedCardsCardIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/cards': typeof AuthenticatedCardsRoute
+  '/cards': typeof AuthenticatedCardsRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/wallets': typeof AuthenticatedWalletsRoute
+  '/cards/$cardId': typeof AuthenticatedCardsCardIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,9 +92,10 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
-  '/_authenticated/cards': typeof AuthenticatedCardsRoute
+  '/_authenticated/cards': typeof AuthenticatedCardsRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/wallets': typeof AuthenticatedWalletsRoute
+  '/_authenticated/cards/$cardId': typeof AuthenticatedCardsCardIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/cards'
     | '/dashboard'
     | '/wallets'
+    | '/cards/$cardId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/cards'
     | '/dashboard'
     | '/wallets'
+    | '/cards/$cardId'
   id:
     | '__root__'
     | '/'
@@ -116,6 +128,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cards'
     | '/_authenticated/dashboard'
     | '/_authenticated/wallets'
+    | '/_authenticated/cards/$cardId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,19 +196,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cards/$cardId': {
+      id: '/_authenticated/cards/$cardId'
+      path: '/$cardId'
+      fullPath: '/cards/$cardId'
+      preLoaderRoute: typeof AuthenticatedCardsCardIdRouteImport
+      parentRoute: typeof AuthenticatedCardsRoute
+    }
   }
 }
 
+interface AuthenticatedCardsRouteChildren {
+  AuthenticatedCardsCardIdRoute: typeof AuthenticatedCardsCardIdRoute
+}
+
+const AuthenticatedCardsRouteChildren: AuthenticatedCardsRouteChildren = {
+  AuthenticatedCardsCardIdRoute: AuthenticatedCardsCardIdRoute,
+}
+
+const AuthenticatedCardsRouteWithChildren =
+  AuthenticatedCardsRoute._addFileChildren(AuthenticatedCardsRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
-  AuthenticatedCardsRoute: typeof AuthenticatedCardsRoute
+  AuthenticatedCardsRoute: typeof AuthenticatedCardsRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedWalletsRoute: typeof AuthenticatedWalletsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
-  AuthenticatedCardsRoute: AuthenticatedCardsRoute,
+  AuthenticatedCardsRoute: AuthenticatedCardsRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedWalletsRoute: AuthenticatedWalletsRoute,
 }
