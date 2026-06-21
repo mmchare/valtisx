@@ -96,7 +96,12 @@ function CardsPage() {
             const shown = reveal[c.id];
             const masked = ghost || !shown;
             return (
-              <div key={c.id} className={`${isGold ? "card-premium shimmer-gold" : "card-soft"} rounded-2xl p-6 aspect-[1.586/1] flex flex-col justify-between relative overflow-hidden`}>
+              <Link
+                key={c.id}
+                to="/cards/$cardId"
+                params={{ cardId: c.id }}
+                className={`${isGold ? "card-premium shimmer-gold" : "card-soft"} rounded-2xl p-6 aspect-[1.586/1] flex flex-col justify-between relative overflow-hidden block hover:scale-[1.01] transition`}
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <p className={`text-xs uppercase tracking-[0.25em] ${isGold ? "text-white/60" : "text-muted-foreground"}`}>{c.brand}</p>
@@ -134,13 +139,13 @@ function CardsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setReveal((r) => ({ ...r, [c.id]: !r[c.id] }))}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReveal((r) => ({ ...r, [c.id]: !r[c.id] })); }}
                   className={`absolute top-3 right-3 p-1.5 rounded-full transition ${isGold ? "bg-white/10 hover:bg-white/20 text-white" : "bg-muted hover:bg-muted/70 text-muted-foreground"}`}
                   title={shown ? "Masquer" : "Révéler"}
                 >
                   {shown ? <Lock className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </button>
-              </div>
+              </Link>
             );
           })}
         </div>
