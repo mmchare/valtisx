@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Allow self-deploys on Vercel: the wrapper forces Cloudflare inside Lovable's
+  // build, so this preset only kicks in outside Lovable (Vercel/CI). The
+  // `vercel` preset emits `.vercel/output` in the standard build output format,
+  // which avoids the 404 you get when Vercel tries to serve a Cloudflare worker.
+  nitro: { preset: "vercel" },
 });
