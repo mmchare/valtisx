@@ -89,6 +89,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           country: string | null
@@ -118,6 +151,75 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      transfers: {
+        Row: {
+          amount: number
+          block_reason: string | null
+          created_at: string
+          currency: string
+          current_step: string | null
+          from_wallet_id: string
+          id: string
+          progress: number
+          recipient_identifier: string
+          recipient_user_id: string | null
+          recipient_wallet_id: string | null
+          reference: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["transfer_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          block_reason?: string | null
+          created_at?: string
+          currency: string
+          current_step?: string | null
+          from_wallet_id: string
+          id?: string
+          progress?: number
+          recipient_identifier: string
+          recipient_user_id?: string | null
+          recipient_wallet_id?: string | null
+          reference?: string | null
+          sender_id: string
+          status?: Database["public"]["Enums"]["transfer_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          block_reason?: string | null
+          created_at?: string
+          currency?: string
+          current_step?: string | null
+          from_wallet_id?: string
+          id?: string
+          progress?: number
+          recipient_identifier?: string
+          recipient_user_id?: string | null
+          recipient_wallet_id?: string | null
+          reference?: string | null
+          sender_id?: string
+          status?: Database["public"]["Enums"]["transfer_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfers_from_wallet_id_fkey"
+            columns: ["from_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_recipient_wallet_id_fkey"
+            columns: ["recipient_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -178,6 +280,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_wallet: {
+        Args: { _delta: number; _reason: string; _wallet_id: string }
+        Returns: number
+      }
       admin_list_clients: {
         Args: never
         Returns: {
@@ -187,6 +293,8 @@ export type Database = {
           card_tier: Database["public"]["Enums"]["card_tier"]
           email: string
           full_name: string
+          is_admin: boolean
+          is_compliance: boolean
           kyc_status: string
           total_cad: number
           user_id: string
@@ -244,6 +352,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_kyc_status: {
+        Args: { _status: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_role: {
+        Args: {
+          _grant: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      admin_user_wallets: {
+        Args: { _user_id: string }
+        Returns: {
+          balance: number
+          currency: string
+          id: string
+          is_primary: boolean
+          label: string
+        }[]
+      }
+      block_transfer: {
+        Args: { _id: string; _reason: string }
+        Returns: undefined
+      }
       card_history: {
         Args: { _card_id: string }
         Returns: {
@@ -256,6 +390,7 @@ export type Database = {
         }[]
       }
       claim_admin_if_none: { Args: never; Returns: boolean }
+      complete_transfer: { Args: { _id: string }; Returns: undefined }
       generate_card_for_user: {
         Args: {
           _holder_name: string
@@ -271,6 +406,39 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_notifications_read: { Args: { _ids: string[] }; Returns: undefined }
+      notify_user: {
+        Args: {
+          _body: string
+          _meta?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      start_transfer: {
+        Args: {
+          _amount: number
+          _from_wallet: string
+          _recipient: string
+          _reference?: string
+        }
+        Returns: string
+      }
+      submit_kyc: {
+        Args: {
+          _country: string
+          _doc_number: string
+          _doc_type: string
+          _full_name: string
+        }
+        Returns: undefined
+      }
+      update_transfer_progress: {
+        Args: { _id: string; _progress: number; _step: string }
+        Returns: undefined
+      }
       user_total_cad: { Args: { _user_id: string }; Returns: number }
     }
     Enums: {
@@ -278,6 +446,12 @@ export type Database = {
       card_status: "active" | "blocked" | "expired"
       card_tier: "standard" | "gold_plus"
       kyc_status: "pending" | "in_review" | "verified" | "rejected"
+      transfer_status:
+        | "verifying"
+        | "blocked"
+        | "success"
+        | "failed"
+        | "cancelled"
       wallet_currency: "CAD" | "EUR" | "USD"
     }
     CompositeTypes: {
@@ -410,6 +584,13 @@ export const Constants = {
       card_status: ["active", "blocked", "expired"],
       card_tier: ["standard", "gold_plus"],
       kyc_status: ["pending", "in_review", "verified", "rejected"],
+      transfer_status: [
+        "verifying",
+        "blocked",
+        "success",
+        "failed",
+        "cancelled",
+      ],
       wallet_currency: ["CAD", "EUR", "USD"],
     },
   },
