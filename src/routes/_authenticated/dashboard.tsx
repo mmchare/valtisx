@@ -291,6 +291,7 @@ function Dashboard() {
             <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
+            <NotificationsBell userId={userId} />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
             </Button>
@@ -299,6 +300,29 @@ function Dashboard() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-12 space-y-10">
+        {profile && profile.kyc_status !== "approved" && profile.kyc_status !== "verified" && (
+          <div className="rounded-xl border border-gold/40 bg-gold/5 p-5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-gold-gradient mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">
+                  Vérification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                  {profile.kyc_status === "review"
+                    ? "Votre dossier a été reçu. Un administrateur va le valider, votre carte standard sera alors activée automatiquement."
+                    : "Soumettez votre dossier KYC pour activer votre carte standard et lever les restrictions sur vos virements."}
+                </p>
+              </div>
+            </div>
+            {profile.kyc_status !== "review" && (
+              <Button variant="gold" onClick={() => setKycOpen(true)}>
+                <ShieldCheck className="w-4 h-4" /> Soumettre mon KYC
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Patrimoine global</p>
@@ -562,6 +586,8 @@ function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <KycDialog open={kycOpen} onOpenChange={setKycOpen} defaultName={profile?.full_name ?? ""} />
     </div>
   );
 }
