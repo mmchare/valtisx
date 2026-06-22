@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff, LogOut, CreditCard, ShieldCheck, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
+import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { Button } from "@/components/ui/button";
 import { useGhostMode } from "@/hooks/use-ghost-mode";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ function CardsPage() {
             <Button variant="ghost" size="sm" onClick={toggle}>
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
+            <NotificationsBell userId={userId} />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
             </Button>
