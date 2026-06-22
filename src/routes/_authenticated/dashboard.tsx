@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
+import { NotificationsBell } from "@/components/valtis/notifications-bell";
+import { KycDialog } from "@/components/valtis/kyc-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -45,10 +47,13 @@ const COMPLIANCE_CODE = "VALTIS-2026";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { ghost, toggle } = useGhostMode();
   const [userId, setUserId] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
+  const [kycOpen, setKycOpen] = useState(false);
+  const [transferId, setTransferId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [transferFrom, setTransferFrom] = useState<string>("");
   const [transferTo, setTransferTo] = useState("");
@@ -131,6 +136,7 @@ function Dashboard() {
     setProgress(0);
     setBlockReason(null);
     setUnlockCode("");
+    setTransferId(null);
     setTransferOpen(true);
   }
 
@@ -150,7 +156,7 @@ function Dashboard() {
     return null;
   }
 
-  async function runVerification(reason: string | null) {
+  async function runVerification(reason: string | null, tId: string | null) {
     // Build fresh step list
     const list: VerifStep[] = BASE_STEPS.map((s) => ({ ...s, status: "pending" }));
     setSteps(list);
@@ -168,6 +174,9 @@ function Dashboard() {
         await new Promise((r) => setTimeout(r, 55));
         setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
       }
+      if (tId) {
+        await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: list[i].pct, _step: list[i].key } as never);
+      }
       // EDD gate at 63%
       if (list[i].key === "edd" && reason) {
         list[i] = { ...list[i], status: "blocked" };
@@ -175,16 +184,19 @@ function Dashboard() {
         setProgress(63);
         setBlockReason(reason);
         setPhase("blocked");
+        if (tId) await supabase.rpc("block_transfer" as never, { _id: tId, _reason: reason } as never);
         return;
       }
       list[i] = { ...list[i], status: "done" };
       setSteps([...list]);
     }
     setProgress(100);
+    if (tId) await supabase.rpc("complete_transfer" as never, { _id: tId } as never);
+    qc.invalidateQueries({ queryKey: ["wallets"] });
     setPhase("success");
   }
 
-  function startTransfer(e: React.FormEvent) {
+  async function startTransfer(e: React.FormEvent) {
     e.preventDefault();
     const amount = parseFloat(transferAmount);
     if (!transferFrom) return toast.error("Sélectionnez un portefeuille");
@@ -195,7 +207,21 @@ function Dashboard() {
     if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
     const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
     setPhase("verifying");
-    void runVerification(reason);
+    // Create the transfer record server-side (notifies sender + recipient if known)
+    const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
+      _from_wallet: transferFrom,
+      _recipient: transferTo.trim(),
+      _amount: amount,
+      _reference: transferRef || null,
+    } as never);
+    if (error) {
+      toast.error(error.message);
+      setPhase("form");
+      return;
+    }
+    const id = (tId as unknown) as string;
+    setTransferId(id);
+    void runVerification(reason, id);
   }
 
   async function submitUnlock() {
@@ -227,10 +253,15 @@ function Dashboard() {
         await new Promise((r) => setTimeout(r, 55));
         setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
       }
+      if (transferId) {
+        await supabase.rpc("update_transfer_progress" as never, { _id: transferId, _progress: tail[i].pct, _step: tail[i].key } as never);
+      }
       tail[i] = { ...tail[i], status: "done" };
       setSteps([...tail]);
     }
     setProgress(100);
+    if (transferId) await supabase.rpc("complete_transfer" as never, { _id: transferId } as never);
+    qc.invalidateQueries({ queryKey: ["wallets"] });
     setPhase("success");
   }
 
