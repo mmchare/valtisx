@@ -377,9 +377,6 @@ function Dashboard() {
 
         <section>
           <h2 className="font-display text-xl mb-5 text-muted-foreground">Vos portefeuilles</h2>
-        </section>
-        <IncomingTransfersTracker userId={userId} />
-        <section>
           <div className="grid md:grid-cols-2 gap-5">
             {(wallets ?? []).map((w) => (
               <div key={w.id} className={`${w.is_primary ? "card-premium shimmer-gold" : "card-soft"} rounded-2xl p-6 aspect-[2.2/1] flex flex-col justify-between animate-fade-in-up`}>
