@@ -375,6 +375,8 @@ function Dashboard() {
           </button>
         </section>
 
+        <IncomingTransfersTracker userId={userId} />
+
         <section>
           <h2 className="font-display text-xl mb-5 text-muted-foreground">Vos portefeuilles</h2>
           <div className="grid md:grid-cols-2 gap-5">
