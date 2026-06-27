@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { KycDialog } from "@/components/valtis/kyc-dialog";
+import { IncomingTransfersTracker } from "@/components/valtis/incoming-transfers-tracker";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -373,6 +374,8 @@ function Dashboard() {
             </div>
           </button>
         </section>
+
+        <IncomingTransfersTracker userId={userId} />
 
         <section>
           <h2 className="font-display text-xl mb-5 text-muted-foreground">Vos portefeuilles</h2>

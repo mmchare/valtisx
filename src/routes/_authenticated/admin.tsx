@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
+import { AdminRecipientBlocks } from "@/components/valtis/admin-recipient-blocks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -411,6 +412,8 @@ function AdminPage() {
         <p className="text-xs text-muted-foreground">
           Le passage en Gold Plus nécessite un patrimoine global ≥ 500 000 CAD. Toutes les actions sont tracées dans le journal d'audit.
         </p>
+
+        <AdminRecipientBlocks />
       </main>
 
       {/* Manage user dialog */}

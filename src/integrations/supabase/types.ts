@@ -162,12 +162,18 @@ export type Database = {
           from_wallet_id: string
           id: string
           progress: number
+          recipient_block_reason: string | null
+          recipient_current_step: string | null
           recipient_identifier: string
+          recipient_progress: number
+          recipient_status: string
           recipient_user_id: string | null
           recipient_wallet_id: string | null
           reference: string | null
+          required_documents: Json
           sender_id: string
           status: Database["public"]["Enums"]["transfer_status"]
+          submitted_documents: Json
           updated_at: string
         }
         Insert: {
@@ -179,12 +185,18 @@ export type Database = {
           from_wallet_id: string
           id?: string
           progress?: number
+          recipient_block_reason?: string | null
+          recipient_current_step?: string | null
           recipient_identifier: string
+          recipient_progress?: number
+          recipient_status?: string
           recipient_user_id?: string | null
           recipient_wallet_id?: string | null
           reference?: string | null
+          required_documents?: Json
           sender_id: string
           status?: Database["public"]["Enums"]["transfer_status"]
+          submitted_documents?: Json
           updated_at?: string
         }
         Update: {
@@ -196,12 +208,18 @@ export type Database = {
           from_wallet_id?: string
           id?: string
           progress?: number
+          recipient_block_reason?: string | null
+          recipient_current_step?: string | null
           recipient_identifier?: string
+          recipient_progress?: number
+          recipient_status?: string
           recipient_user_id?: string | null
           recipient_wallet_id?: string | null
           reference?: string | null
+          required_documents?: Json
           sender_id?: string
           status?: Database["public"]["Enums"]["transfer_status"]
+          submitted_documents?: Json
           updated_at?: string
         }
         Relationships: [
@@ -283,6 +301,10 @@ export type Database = {
       admin_adjust_wallet: {
         Args: { _delta: number; _reason: string; _wallet_id: string }
         Returns: number
+      }
+      admin_clear_recipient_block: {
+        Args: { _transfer_id: string }
+        Returns: undefined
       }
       admin_list_clients: {
         Args: never
@@ -391,6 +413,10 @@ export type Database = {
       }
       claim_admin_if_none: { Args: never; Returns: boolean }
       complete_transfer: { Args: { _id: string }; Returns: undefined }
+      compute_required_documents: {
+        Args: { _amount_cad: number }
+        Returns: Json
+      }
       generate_card_for_user: {
         Args: {
           _holder_name: string
@@ -416,6 +442,10 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      recipient_submit_documents: {
+        Args: { _documents: Json; _transfer_id: string }
+        Returns: undefined
       }
       start_transfer: {
         Args: {
