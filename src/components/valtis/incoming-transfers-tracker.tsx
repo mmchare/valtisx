@@ -85,8 +85,10 @@ function IncomingCard({ t, onChanged }: { t: IncomingTransfer; onChanged: () => 
     onChanged();
   }
 
-  const blocked = t.recipient_progress <= 63 && t.recipient_status !== "documents_review";
   const inReview = t.recipient_status === "documents_review";
+  const blocked = !inReview && t.recipient_progress <= 63;
+  const submittedCodes = new Set((t.submitted_documents ?? []).map((s) => s.code));
+  const missingCount = required.filter((d) => !submittedCodes.has(d.code)).length;
 
   return (
     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
@@ -100,10 +102,8 @@ function IncomingCard({ t, onChanged }: { t: IncomingTransfer; onChanged: () => 
             Reçu le {new Date(t.created_at).toLocaleString("fr-CA")}
           </p>
         </div>
-        <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded-full border ${
-          inReview ? "border-primary/40 text-primary" : "border-amber-500/40 text-amber-600"
-        }`}>
-          {inReview ? "En revue conformité" : `Bloqué à ${t.recipient_progress}%`}
+        <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full border border-amber-500/40 text-amber-600">
+          {inReview ? "En revue conformité — 63%" : `Bloqué à ${t.recipient_progress}%`}
         </span>
       </div>
 
@@ -113,6 +113,13 @@ function IncomingCard({ t, onChanged }: { t: IncomingTransfer; onChanged: () => 
           <AlertTriangle className="w-3.5 h-3.5 mt-0.5 text-amber-500 shrink-0" />
           {t.recipient_block_reason || "Vérification en cours."}
         </p>
+        {required.length > 0 && (
+          <p className="text-[11px] text-muted-foreground mt-1 pl-5">
+            {inReview
+              ? `Dossier complet (${required.length} document${required.length>1?"s":""}) — validation manuelle requise pour passer 63%.`
+              : `${required.length - missingCount}/${required.length} document(s) soumis · ${missingCount} manquant(s).`}
+          </p>
+        )}
       </div>
 
       {blocked && required.length > 0 && (
@@ -147,7 +154,7 @@ function IncomingCard({ t, onChanged }: { t: IncomingTransfer; onChanged: () => 
       {inReview && (
         <p className="text-xs text-muted-foreground border-t border-amber-500/20 pt-3 flex items-center gap-2">
           <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-          Vos documents sont en cours d'examen par la cellule conformité (progression {t.recipient_progress}%).
+          Dossier en cours d'examen par la cellule conformité Valtis. La jauge reste bloquée à 63% jusqu'à validation manuelle.
         </p>
       )}
     </div>

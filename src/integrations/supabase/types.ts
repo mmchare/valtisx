@@ -417,6 +417,7 @@ export type Database = {
         Args: { _amount_cad: number }
         Returns: Json
       }
+      edd_tier_label: { Args: { _amount_cad: number }; Returns: string }
       generate_card_for_user: {
         Args: {
           _holder_name: string
