@@ -81,7 +81,7 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Code de vérification envoyé. (Démo : 123456)");
+        toast.success("Un code à 6 chiffres a été envoyé à votre e-mail.");
         setResendIn(30);
         setStep("otp");
         void signUpData;
@@ -91,9 +91,8 @@ function AuthPage() {
           password: parsed.data.password,
         });
         if (error) throw error;
-        toast.success("Code de vérification envoyé. (Démo : 123456)");
-        setResendIn(30);
-        setStep("otp");
+        toast.success("Connexion réussie.");
+        navigate({ to: "/dashboard" });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur d'authentification";
@@ -111,22 +110,36 @@ function AuthPage() {
     }
     setOtpLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 700));
-      if (otp !== "123456") {
-        toast.error("Code incorrect. (Démo : 123456)");
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "email",
+      });
+      if (error) {
+        toast.error(error.message || "Code incorrect ou expiré.");
         return;
       }
-      toast.success(mode === "signup" ? "Inscription finalisée." : "Connexion réussie.");
+      toast.success("Inscription finalisée.");
       navigate({ to: "/dashboard" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Vérification impossible";
+      toast.error(message);
     } finally {
       setOtpLoading(false);
     }
   }
 
-  function handleResend() {
+  async function handleResend() {
     if (resendIn > 0) return;
-    toast.success("Nouveau code envoyé. (Démo : 123456)");
-    setResendIn(30);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) throw error;
+      toast.success("Nouveau code envoyé à votre e-mail.");
+      setResendIn(30);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible de renvoyer le code";
+      toast.error(message);
+    }
   }
 
   return (
