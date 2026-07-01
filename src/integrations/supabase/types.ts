@@ -129,6 +129,9 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          kyc_document_number: string | null
+          kyc_document_type: string | null
+          kyc_document_url: string | null
           kyc_status: Database["public"]["Enums"]["kyc_status"]
           updated_at: string
         }
@@ -138,6 +141,9 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          kyc_document_number?: string | null
+          kyc_document_type?: string | null
+          kyc_document_url?: string | null
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           updated_at?: string
         }
@@ -147,6 +153,9 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          kyc_document_number?: string | null
+          kyc_document_type?: string | null
+          kyc_document_url?: string | null
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           updated_at?: string
         }
@@ -317,6 +326,9 @@ export type Database = {
           full_name: string
           is_admin: boolean
           is_compliance: boolean
+          kyc_document_number: string
+          kyc_document_type: string
+          kyc_document_url: string
           kyc_status: string
           total_cad: number
           user_id: string
@@ -457,15 +469,26 @@ export type Database = {
         }
         Returns: string
       }
-      submit_kyc: {
-        Args: {
-          _country: string
-          _doc_number: string
-          _doc_type: string
-          _full_name: string
-        }
-        Returns: undefined
-      }
+      submit_kyc:
+        | {
+            Args: {
+              _country: string
+              _doc_number: string
+              _doc_type: string
+              _full_name: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _country: string
+              _doc_number: string
+              _doc_type: string
+              _doc_url?: string
+              _full_name: string
+            }
+            Returns: undefined
+          }
       update_transfer_progress: {
         Args: { _id: string; _progress: number; _step: string }
         Returns: undefined
