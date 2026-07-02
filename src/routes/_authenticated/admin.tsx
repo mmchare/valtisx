@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   LogOut,
@@ -14,12 +15,14 @@ import {
   UserCog,
   Wallet as WalletIcon,
   Settings2,
+  Lock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { AdminRecipientBlocks } from "@/components/valtis/admin-recipient-blocks";
 import { Button } from "@/components/ui/button";
+import { unlockAdmin, isAdminUnlocked, lockAdmin } from "@/lib/admin-gate.functions";
 import {
   Dialog,
   DialogContent,
@@ -40,8 +43,64 @@ import {
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Administration · Valtis" }] }),
-  component: AdminPage,
+  component: AdminGateWrapper,
 });
+
+function AdminGateWrapper() {
+  const checkUnlocked = useServerFn(isAdminUnlocked);
+  const doUnlock = useServerFn(unlockAdmin);
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const gate = useQuery({
+    queryKey: ["admin-gate-unlocked"],
+    queryFn: () => checkUnlocked({}),
+    staleTime: 60_000,
+  });
+
+  if (gate.isLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Vérification…</div>;
+  }
+
+  if (!gate.data?.unlocked) {
+    async function submitGate(e: React.FormEvent) {
+      e.preventDefault();
+      setSubmitting(true);
+      const res = await doUnlock({ data: { password } });
+      setSubmitting(false);
+      if (!res.ok) return toast.error("Mot de passe incorrect");
+      toast.success("Accès administrateur déverrouillé");
+      gate.refetch();
+    }
+    return (
+      <div className="min-h-screen flex flex-col">
+        <header className="border-b border-border/40">
+          <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+            <ValtisLogo />
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center px-6">
+          <form onSubmit={submitGate} className="w-full max-w-sm space-y-5 border border-border rounded-2xl p-8 bg-surface/40">
+            <div className="text-center space-y-2">
+              <Lock className="w-8 h-8 mx-auto text-gold-gradient" />
+              <h1 className="font-display text-2xl">Espace administrateur</h1>
+              <p className="text-xs text-muted-foreground">Mot de passe requis pour accéder au centre de pilotage.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-pw">Mot de passe administrateur</Label>
+              <Input id="gate-pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus autoComplete="current-password" />
+            </div>
+            <Button type="submit" variant="gold" className="w-full" disabled={submitting}>
+              {submitting ? "Vérification…" : "Déverrouiller"}
+            </Button>
+            <Link to="/dashboard" className="block text-center text-xs text-muted-foreground hover:text-foreground">← Retour</Link>
+          </form>
+        </main>
+      </div>
+    );
+  }
+
+  return <AdminPage onLock={async () => { await lockAdmin({}); gate.refetch(); }} />;
+}
 
 type Client = {
   user_id: string;
@@ -83,7 +142,7 @@ function kycBadgeClass(status: string) {
   }
 }
 
-function AdminPage() {
+function AdminPage({ onLock }: { onLock: () => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
