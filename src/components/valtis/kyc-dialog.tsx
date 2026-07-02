@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export function KycDialog({
   const [country, setCountry] = useState("CA");
   const [docType, setDocType] = useState("passport");
   const [docNumber, setDocNumber] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -43,12 +44,29 @@ export function KycDialog({
     if (!fullName.trim() || !docNumber.trim()) {
       return toast.error("Nom complet et numéro de document requis");
     }
+    if (!file) {
+      return toast.error("Merci d'uploader une photo/scan de votre pièce d'identité");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return toast.error("Fichier trop lourd (max 8 Mo)");
+    }
     setSubmitting(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) { setSubmitting(false); return toast.error("Session expirée"); }
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${uid}/kyc-${Date.now()}.${ext}`;
+    const up = await supabase.storage.from("kyc-documents").upload(path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (up.error) { setSubmitting(false); return toast.error(up.error.message); }
     const { error } = await supabase.rpc("submit_kyc" as never, {
       _full_name: fullName.trim(),
       _country: country,
       _doc_type: docType,
       _doc_number: docNumber.trim(),
+      _doc_url: path,
     } as never);
     setSubmitting(false);
     if (error) return toast.error(error.message);
@@ -116,6 +134,22 @@ export function KycDialog({
               onChange={(e) => setDocNumber(e.target.value)}
               placeholder="ex. AB1234567"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kyc-file" className="flex items-center gap-1.5">
+              <Upload className="w-3.5 h-3.5" /> Pièce d'identité (photo ou scan)
+            </Label>
+            <Input
+              id="kyc-file"
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            {file && (
+              <p className="text-[11px] text-muted-foreground">
+                {file.name} · {(file.size / 1024).toFixed(0)} Ko
+              </p>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground">
             En soumettant ce dossier, vous autorisez Valtis à transmettre ces
