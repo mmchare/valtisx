@@ -332,6 +332,9 @@ function AdminPage({ onLock }: { onLock: () => void }) {
           </nav>
           <div className="flex items-center gap-2">
             <NotificationsBell userId={userId} />
+            <Button variant="ghost" size="sm" onClick={onLock} title="Verrouiller l'espace admin">
+              <Lock className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
             </Button>
