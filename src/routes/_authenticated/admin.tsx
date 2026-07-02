@@ -107,6 +107,9 @@ type Client = {
   email: string;
   full_name: string | null;
   kyc_status: string;
+  kyc_document_url: string | null;
+  kyc_document_type: string | null;
+  kyc_document_number: string | null;
   total_cad: number;
   card_id: string | null;
   card_tier: "standard" | "gold_plus" | null;
@@ -396,6 +399,21 @@ function AdminPage({ onLock }: { onLock: () => void }) {
                       <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${kycBadgeClass(c.kyc_status)}`}>
                         {c.kyc_status}
                       </span>
+                      {c.kyc_document_url && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const { data, error } = await supabase.storage
+                              .from("kyc-documents")
+                              .createSignedUrl(c.kyc_document_url!, 300);
+                            if (error || !data) return toast.error(error?.message ?? "Impossible d'ouvrir le document");
+                            window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                          }}
+                          className="block mt-1 text-[10px] underline text-primary hover:text-foreground"
+                        >
+                          Voir la pièce ({c.kyc_document_type ?? "doc"} · {c.kyc_document_number ?? "—"})
+                        </button>
+                      )}
                       {(c.kyc_status === "review" || c.kyc_status === "pending") && (
                         <div className="mt-1.5 flex gap-1">
                           <Button size="sm" variant="gold" className="h-6 px-2 text-[10px]" disabled={busy === c.user_id + "approved"} onClick={() => setKyc(c.user_id, "approved")}>
