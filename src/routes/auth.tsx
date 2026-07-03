@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ValtisLogo } from "@/components/valtis/logo";
-import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp";
+import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -40,20 +39,11 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"credentials" | "otp">("credentials");
-  const [otp, setOtp] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
-
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendIn]);
+  const [step, setStep] = useState<"credentials" | "check-email">("credentials");
+  const [resendLoading, setResendLoading] = useState(false);
 
   useEffect(() => {
     setStep("credentials");
-    setOtp("");
   }, [mode]);
 
   useEffect(() => {
@@ -72,7 +62,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { data: signUpData, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
@@ -81,10 +71,8 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Un code à 6 chiffres a été envoyé à votre e-mail.");
-        setResendIn(30);
-        setStep("otp");
-        void signUpData;
+        toast.success("E-mail de confirmation envoyé.");
+        setStep("check-email");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
@@ -102,43 +90,21 @@ function AuthPage() {
     }
   }
 
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    if (otp.length !== 6) {
-      toast.error("Saisissez les 6 chiffres du code.");
-      return;
-    }
-    setOtpLoading(true);
+  async function handleResend() {
+    setResendLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.resend({
+        type: "signup",
         email,
-        token: otp,
-        type: "email",
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
-      if (error) {
-        toast.error(error.message || "Code incorrect ou expiré.");
-        return;
-      }
-      toast.success("Inscription finalisée.");
-      navigate({ to: "/dashboard" });
+      if (error) throw error;
+      toast.success("Nouvel e-mail de confirmation envoyé.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Vérification impossible";
+      const message = err instanceof Error ? err.message : "Impossible de renvoyer l'e-mail";
       toast.error(message);
     } finally {
-      setOtpLoading(false);
-    }
-  }
-
-  async function handleResend() {
-    if (resendIn > 0) return;
-    try {
-      const { error } = await supabase.auth.resend({ type: "signup", email });
-      if (error) throw error;
-      toast.success("Nouveau code envoyé à votre e-mail.");
-      setResendIn(30);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible de renvoyer le code";
-      toast.error(message);
+      setResendLoading(false);
     }
   }
 
@@ -155,15 +121,15 @@ function AuthPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
             <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">
-              {step === "otp"
-                ? "Vérification en deux étapes"
+              {step === "check-email"
+                ? "Vérifiez votre boîte mail"
                 : mode === "signin"
                 ? "Accès privé"
                 : "Ouvrir un compte Valtis"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {step === "otp"
-                ? `Entrez le code à 6 chiffres envoyé à ${email}.`
+              {step === "check-email"
+                ? `Un e-mail de confirmation vient d'être envoyé à ${email}.`
                 : mode === "signin"
                 ? "Connectez-vous à votre espace bancaire."
                 : "Quelques secondes pour commencer."}
@@ -193,51 +159,49 @@ function AuthPage() {
               </Button>
             </form>
             ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                  Sécurisé par authentification à deux facteurs
+              <div className="space-y-5">
+                <div className="flex flex-col items-center text-center gap-3 py-2">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MailCheck className="w-7 h-7 text-primary" />
+                  </div>
+                  <p className="text-sm text-foreground">
+                    Ouvrez l'e-mail que nous venons de vous envoyer et cliquez sur le bouton
+                    <span className="font-medium"> « Confirmer mon adresse »</span> pour activer votre compte Valtis.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Pensez à vérifier vos courriers indésirables si vous ne le voyez pas dans quelques minutes.
+                  </p>
                 </div>
-                <div className="flex justify-center py-2">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <Button type="submit" variant="gold" className="w-full h-11" disabled={otpLoading || otp.length !== 6}>
-                  {otpLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Vérifier le code
+                <Button
+                  type="button"
+                  variant="gold"
+                  className="w-full h-11"
+                  onClick={handleResend}
+                  disabled={resendLoading}
+                >
+                  {resendLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Renvoyer l'e-mail de confirmation
                 </Button>
                 <div className="flex items-center justify-between text-xs">
                   <button
                     type="button"
-                    onClick={() => {
-                      setStep("credentials");
-                      setOtp("");
-                    }}
+                    onClick={() => setStep("credentials")}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     ← Modifier l'e-mail
                   </button>
                   <button
                     type="button"
-                    onClick={handleResend}
-                    disabled={resendIn > 0}
-                    className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                    onClick={() => {
+                      setMode("signin");
+                      setStep("credentials");
+                    }}
+                    className="text-primary hover:underline"
                   >
-                    {resendIn > 0 ? `Renvoyer dans ${resendIn}s` : "Renvoyer le code"}
+                    J'ai confirmé, me connecter
                   </button>
                 </div>
-              </form>
+              </div>
             )}
 
             {step === "credentials" && (
