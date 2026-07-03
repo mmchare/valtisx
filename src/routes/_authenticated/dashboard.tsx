@@ -8,6 +8,7 @@ import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { KycDialog } from "@/components/valtis/kyc-dialog";
 import { IncomingTransfersTracker } from "@/components/valtis/incoming-transfers-tracker";
+import { SwiftMessage } from "@/components/valtis/swift-message";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -548,6 +549,21 @@ function Dashboard() {
                     </p>
                   </div>
                 </div>
+              )}
+
+              {phase === "success" && transferId && userId && (
+                <SwiftMessage
+                  input={{
+                    transferId,
+                    amount: parseFloat(transferAmount) || 0,
+                    currency: (wallets ?? []).find((w) => w.id === transferFrom)?.currency ?? "CAD",
+                    createdAt: new Date(),
+                    senderId: userId,
+                    senderName: profile?.full_name,
+                    recipientIdentifier: transferTo,
+                    reference: transferRef,
+                  }}
+                />
               )}
 
               {phase === "success" && (
