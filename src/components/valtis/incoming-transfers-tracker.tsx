@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, CheckCircle2, FileCheck2, ShieldAlert, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SwiftMessage } from "@/components/valtis/swift-message";
 
 type RequiredDoc = { code: string; label: string };
 type IncomingTransfer = {
@@ -20,6 +21,8 @@ type IncomingTransfer = {
   submitted_documents: { code: string; reference: string }[];
   sender_id: string;
   created_at: string;
+  reference: string | null;
+  recipient_identifier: string;
 };
 
 export function IncomingTransfersTracker({ userId }: { userId: string | null }) {
@@ -31,7 +34,7 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transfers")
-        .select("id, amount, currency, recipient_progress, recipient_status, recipient_block_reason, required_documents, submitted_documents, sender_id, created_at")
+        .select("id, amount, currency, recipient_progress, recipient_status, recipient_block_reason, required_documents, submitted_documents, sender_id, created_at, reference, recipient_identifier")
         .eq("recipient_user_id", userId!)
         .neq("recipient_status", "ok")
         .neq("status", "success")
@@ -157,6 +160,19 @@ function IncomingCard({ t, onChanged }: { t: IncomingTransfer; onChanged: () => 
           Dossier en cours d'examen par la cellule conformité Valtis. La jauge reste bloquée à 63% jusqu'à validation manuelle.
         </p>
       )}
+
+      <SwiftMessage
+        input={{
+          transferId: t.id,
+          amount: Number(t.amount),
+          currency: t.currency,
+          createdAt: t.created_at,
+          senderId: t.sender_id,
+          recipientIdentifier: t.recipient_identifier,
+          reference: t.reference,
+        }}
+        className="mt-1"
+      />
     </div>
   );
 }
