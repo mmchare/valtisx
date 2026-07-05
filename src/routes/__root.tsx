@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { registerPWA } from "@/lib/pwa-register";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAInstallPrompt } from "@/components/valtis/pwa-install-prompt";
 import "@fontsource/inter-tight/400.css";
@@ -151,6 +152,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    registerPWA();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

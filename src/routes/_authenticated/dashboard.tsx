@@ -2,13 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { KycDialog } from "@/components/valtis/kyc-dialog";
 import { IncomingTransfersTracker } from "@/components/valtis/incoming-transfers-tracker";
 import { SwiftMessage } from "@/components/valtis/swift-message";
+import { requestPWAInstall } from "@/components/valtis/pwa-install-prompt";
+import { greet } from "@/lib/greet";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -293,6 +295,15 @@ function Dashboard() {
             <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => requestPWAInstall()}
+              title="Installer l'application"
+              className="hidden sm:inline-flex"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
             <NotificationsBell userId={userId} />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
@@ -332,7 +343,8 @@ function Dashboard() {
               {formatAmount(totalCad, "CAD", ghost)}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Bonjour {profile?.full_name || profile?.email?.split("@")[0] || "client"} · Statut KYC : <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
+              {greet(profile?.full_name, profile?.email)} · Statut KYC :{" "}
+              <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -8,35 +9,65 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISSED_KEY = "valtis-pwa-install-dismissed";
+const INSTALLED_KEY = "valtis-pwa-installed";
+
+/** Public API — call from anywhere in the app to re-open the install banner. */
+export function requestPWAInstall(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("valtis:pwa-install-request"));
+}
 
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const deferredRef = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const dismissed = window.localStorage.getItem(DISMISSED_KEY);
-    if (dismissed === "1") return;
-
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsVisible(true);
+      const evt = e as BeforeInstallPromptEvent;
+      deferredRef.current = evt;
+      setDeferredPrompt(evt);
+      // Only auto-show once per device. The dismiss/install flag suppresses it thereafter.
+      const dismissed = window.localStorage.getItem(DISMISSED_KEY);
+      const installed = window.localStorage.getItem(INSTALLED_KEY);
+      if (dismissed !== "1" && installed !== "1") {
+        setIsVisible(true);
+      }
     };
 
     const installed = () => {
+      deferredRef.current = null;
       setDeferredPrompt(null);
       setIsVisible(false);
+      window.localStorage.setItem(INSTALLED_KEY, "1");
       window.localStorage.setItem(DISMISSED_KEY, "1");
+    };
+
+    const relaunchRequest = () => {
+      // Explicit user action — clear the "shown once" gate.
+      window.localStorage.removeItem(DISMISSED_KEY);
+      if (deferredRef.current) {
+        setIsVisible(true);
+      } else if (window.localStorage.getItem(INSTALLED_KEY) === "1") {
+        toast.info("Valtis est déjà installé sur cet appareil.");
+      } else {
+        toast.info(
+          "Ouvrez le menu de votre navigateur puis « Installer l'application » — ou revenez plus tard pour la proposition automatique.",
+        );
+      }
     };
 
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", installed);
+    window.addEventListener("valtis:pwa-install-request", relaunchRequest);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", installed);
+      window.removeEventListener("valtis:pwa-install-request", relaunchRequest);
     };
   }, []);
 
@@ -46,7 +77,9 @@ export function PWAInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
       window.localStorage.setItem(DISMISSED_KEY, "1");
+      window.localStorage.setItem(INSTALLED_KEY, "1");
     }
+    deferredRef.current = null;
     setDeferredPrompt(null);
     setIsVisible(false);
   }, [deferredPrompt]);
