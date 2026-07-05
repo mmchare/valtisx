@@ -12,12 +12,14 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { PWAInstallPrompt } from "@/components/valtis/pwa-install-prompt";
 import "@fontsource/inter-tight/400.css";
 import "@fontsource/inter-tight/500.css";
 import "@fontsource/inter-tight/600.css";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
+
 
 function NotFoundComponent() {
   return (
