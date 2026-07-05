@@ -1,0 +1,26 @@
+{
+  "name": "Valtis — Banque privée",
+  "short_name": "Valtis",
+  "description": "Gestion de fortune, conformité bancaire et transferts haute sécurité pour le Canada et l'Europe.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "orientation": "portrait",
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
