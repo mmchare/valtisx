@@ -295,6 +295,15 @@ function Dashboard() {
             <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => requestPWAInstall()}
+              title="Installer l'application"
+              className="hidden sm:inline-flex"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
             <NotificationsBell userId={userId} />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
@@ -334,7 +343,8 @@ function Dashboard() {
               {formatAmount(totalCad, "CAD", ghost)}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Bonjour {profile?.full_name || profile?.email?.split("@")[0] || "client"} · Statut KYC : <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
+              {greet(profile?.full_name, profile?.email)} · Statut KYC :{" "}
+              <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
