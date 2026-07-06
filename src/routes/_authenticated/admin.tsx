@@ -51,6 +51,7 @@ function AdminGateWrapper() {
   const doUnlock = useServerFn(unlockAdmin);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [localUnlocked, setLocalUnlocked] = useState(false);
   const gate = useQuery({
     queryKey: ["admin-gate-unlocked"],
     queryFn: () => checkUnlocked({}),
@@ -61,15 +62,25 @@ function AdminGateWrapper() {
     return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Vérification…</div>;
   }
 
-  if (!gate.data?.unlocked) {
+  if (!localUnlocked && !gate.data?.unlocked) {
     async function submitGate(e: React.FormEvent) {
       e.preventDefault();
       setSubmitting(true);
-      const res = await doUnlock({ data: { password } });
-      setSubmitting(false);
-      if (!res.ok) return toast.error("Mot de passe incorrect");
-      toast.success("Accès administrateur déverrouillé");
-      gate.refetch();
+      try {
+        const res = await doUnlock({ data: { password } });
+        if (!res?.ok) {
+          toast.error("Mot de passe incorrect");
+          return;
+        }
+        toast.success("Accès administrateur déverrouillé");
+        setLocalUnlocked(true);
+        gate.refetch();
+      } catch (err) {
+        console.error(err);
+        toast.error("Erreur lors de la vérification");
+      } finally {
+        setSubmitting(false);
+      }
     }
     return (
       <div className="min-h-screen flex flex-col">
@@ -99,7 +110,7 @@ function AdminGateWrapper() {
     );
   }
 
-  return <AdminPage onLock={async () => { await lockAdmin({}); gate.refetch(); }} />;
+  return <AdminPage onLock={async () => { await lockAdmin({}); setLocalUnlocked(false); gate.refetch(); }} />;
 }
 
 type Client = {
