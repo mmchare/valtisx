@@ -700,6 +700,74 @@ function AdminPage({ onLock }: { onLock: () => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Quick funds dialog */}
+      <Dialog open={fundsOpen} onOpenChange={setFundsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-gold-gradient" /> Ajouter des fonds
+            </DialogTitle>
+            <DialogDescription>
+              Créditez (ou débitez) instantanément le portefeuille d'un client. Opération tracée dans le journal d'audit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={fundsClientId} onValueChange={(v) => { setFundsClientId(v); setFundsWalletId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Choisir un client" /></SelectTrigger>
+                <SelectContent>
+                  {list.map((c) => (
+                    <SelectItem key={c.user_id} value={c.user_id}>
+                      {c.full_name || c.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Portefeuille</Label>
+              <Select value={fundsWalletId} onValueChange={setFundsWalletId} disabled={!fundsWallets?.length}>
+                <SelectTrigger><SelectValue placeholder={fundsClientId ? "Choisir un portefeuille" : "—"} /></SelectTrigger>
+                <SelectContent>
+                  {(fundsWallets ?? []).map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.label} · {w.currency} · {Number(w.balance).toLocaleString("fr-CA")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Sens</Label>
+                <Select value={fundsDir} onValueChange={(v) => setFundsDir(v as "credit" | "debit")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credit">Crédit (+)</SelectItem>
+                    <SelectItem value="debit">Débit (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="funds-amount">Montant</Label>
+                <Input id="funds-amount" type="number" min="0" step="0.01" value={fundsAmount} onChange={(e) => setFundsAmount(e.target.value)} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="funds-reason">Motif</Label>
+              <Input id="funds-reason" value={fundsReason} onChange={(e) => setFundsReason(e.target.value)} placeholder="ex. dépôt manuel, geste commercial…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFundsOpen(false)}>Annuler</Button>
+            <Button variant="gold" onClick={submitFunds} disabled={fundsBusy}>
+              {fundsBusy ? "Envoi…" : "Confirmer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
