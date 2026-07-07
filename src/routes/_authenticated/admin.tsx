@@ -17,6 +17,7 @@ import {
   Settings2,
   Lock,
   RefreshCw,
+  Banknote,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
@@ -167,6 +168,51 @@ function AdminPage({ onLock }: { onLock: () => void }) {
   const [adjustDelta, setAdjustDelta] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustDir, setAdjustDir] = useState<"credit" | "debit">("credit");
+  const [fundsOpen, setFundsOpen] = useState(false);
+  const [fundsClientId, setFundsClientId] = useState<string>("");
+  const [fundsWalletId, setFundsWalletId] = useState<string>("");
+  const [fundsAmount, setFundsAmount] = useState("");
+  const [fundsReason, setFundsReason] = useState("");
+  const [fundsDir, setFundsDir] = useState<"credit" | "debit">("credit");
+  const [fundsBusy, setFundsBusy] = useState(false);
+
+  const { data: fundsWallets } = useQuery({
+    queryKey: ["admin-user-wallets", fundsClientId],
+    enabled: !!fundsClientId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_user_wallets", { _user_id: fundsClientId });
+      if (error) throw error;
+      return ((data ?? []) as unknown) as AdminWallet[];
+    },
+  });
+
+  useEffect(() => {
+    if (fundsWallets && fundsWallets.length && !fundsWallets.find((w) => w.id === fundsWalletId)) {
+      const primary = fundsWallets.find((w) => w.is_primary) ?? fundsWallets[0];
+      setFundsWalletId(primary.id);
+    }
+  }, [fundsWallets, fundsWalletId]);
+
+  async function submitFunds() {
+    if (!fundsWalletId) return toast.error("Choisissez un portefeuille");
+    const n = parseFloat(fundsAmount);
+    if (!n || n <= 0) return toast.error("Montant invalide");
+    setFundsBusy(true);
+    const signed = fundsDir === "credit" ? n : -n;
+    const { error } = await supabase.rpc("admin_adjust_wallet", {
+      _wallet_id: fundsWalletId,
+      _delta: signed,
+      _reason: fundsReason || (fundsDir === "credit" ? "Crédit administrateur" : "Débit administrateur"),
+    });
+    setFundsBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(fundsDir === "credit" ? "Fonds crédités" : "Fonds débités");
+    setFundsOpen(false);
+    setFundsAmount("");
+    setFundsReason("");
+    qc.invalidateQueries({ queryKey: ["admin-user-wallets", fundsClientId] });
+    refetch();
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -391,9 +437,26 @@ function AdminPage({ onLock }: { onLock: () => void }) {
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{list.length} client{list.length > 1 ? "s" : ""} listé{list.length > 1 ? "s" : ""}.</p>
-          <Button size="sm" variant="outline" onClick={() => refetch()} title="Recharger la liste">
-            <RefreshCw className="w-3 h-3" /> Rafraîchir
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="gold"
+              onClick={() => {
+                setFundsDir("credit");
+                setFundsClientId(list[0]?.user_id ?? "");
+                setFundsWalletId("");
+                setFundsAmount("");
+                setFundsReason("");
+                setFundsOpen(true);
+              }}
+              disabled={list.length === 0}
+            >
+              <Banknote className="w-3 h-3" /> Ajouter des fonds
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => refetch()} title="Recharger la liste">
+              <RefreshCw className="w-3 h-3" /> Rafraîchir
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border overflow-hidden">
@@ -634,6 +697,74 @@ function AdminPage({ onLock }: { onLock: () => void }) {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAdjustWallet(null)}>Annuler</Button>
             <Button variant="gold" onClick={submitAdjust}>Confirmer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick funds dialog */}
+      <Dialog open={fundsOpen} onOpenChange={setFundsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-gold-gradient" /> Ajouter des fonds
+            </DialogTitle>
+            <DialogDescription>
+              Créditez (ou débitez) instantanément le portefeuille d'un client. Opération tracée dans le journal d'audit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={fundsClientId} onValueChange={(v) => { setFundsClientId(v); setFundsWalletId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Choisir un client" /></SelectTrigger>
+                <SelectContent>
+                  {list.map((c) => (
+                    <SelectItem key={c.user_id} value={c.user_id}>
+                      {c.full_name || c.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Portefeuille</Label>
+              <Select value={fundsWalletId} onValueChange={setFundsWalletId} disabled={!fundsWallets?.length}>
+                <SelectTrigger><SelectValue placeholder={fundsClientId ? "Choisir un portefeuille" : "—"} /></SelectTrigger>
+                <SelectContent>
+                  {(fundsWallets ?? []).map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.label} · {w.currency} · {Number(w.balance).toLocaleString("fr-CA")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Sens</Label>
+                <Select value={fundsDir} onValueChange={(v) => setFundsDir(v as "credit" | "debit")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credit">Crédit (+)</SelectItem>
+                    <SelectItem value="debit">Débit (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="funds-amount">Montant</Label>
+                <Input id="funds-amount" type="number" min="0" step="0.01" value={fundsAmount} onChange={(e) => setFundsAmount(e.target.value)} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="funds-reason">Motif</Label>
+              <Input id="funds-reason" value={fundsReason} onChange={(e) => setFundsReason(e.target.value)} placeholder="ex. dépôt manuel, geste commercial…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFundsOpen(false)}>Annuler</Button>
+            <Button variant="gold" onClick={submitFunds} disabled={fundsBusy}>
+              {fundsBusy ? "Envoi…" : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
