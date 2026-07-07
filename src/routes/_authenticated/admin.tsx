@@ -16,6 +16,7 @@ import {
   Wallet as WalletIcon,
   Settings2,
   Lock,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
@@ -174,6 +175,8 @@ function AdminPage({ onLock }: { onLock: () => void }) {
   const { data: isAdmin, isLoading: roleLoading } = useQuery({
     queryKey: ["isAdmin", userId],
     enabled: !!userId,
+    refetchOnMount: "always",
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
@@ -201,6 +204,8 @@ function AdminPage({ onLock }: { onLock: () => void }) {
   const { data: clients, refetch } = useQuery({
     queryKey: ["admin-clients"],
     enabled: !!isAdmin,
+    refetchOnMount: "always",
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_list_clients");
       if (error) throw error;
@@ -383,6 +388,13 @@ function AdminPage({ onLock }: { onLock: () => void }) {
             <p className="font-display text-2xl mt-1">{formatCad(totalAum)}</p>
           </div>
         </section>
+
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">{list.length} client{list.length > 1 ? "s" : ""} listé{list.length > 1 ? "s" : ""}.</p>
+          <Button size="sm" variant="outline" onClick={() => refetch()} title="Recharger la liste">
+            <RefreshCw className="w-3 h-3" /> Rafraîchir
+          </Button>
+        </div>
 
         <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
