@@ -20,7 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Tableau de bord Â· Valtis" }] }),
+  head: () => ({ meta: [{ title: "Tableau de bord · Valtis" }] }),
   component: Dashboard,
 });
 
@@ -37,13 +37,13 @@ type StepStatus = "pending" | "running" | "done" | "blocked";
 type VerifStep = { key: string; label: string; pct: number; status: StepStatus };
 
 const BASE_STEPS: Omit<VerifStep, "status">[] = [
-  { key: "auth", label: "Authentification renforcÃ©e du donneur d'ordre", pct: 12 },
-  { key: "wallet", label: "VÃ©rification du portefeuille source", pct: 25 },
-  { key: "aml", label: "ContrÃ´le anti-blanchiment (AML / CFT)", pct: 38 },
-  { key: "benef", label: "Validation du bÃ©nÃ©ficiaire & sanctions", pct: 50 },
-  { key: "edd", label: "ConformitÃ© approfondie (EDD)", pct: 63 },
-  { key: "reserve", label: "RÃ©servation des fonds", pct: 75 },
-  { key: "purpose_docs", label: "VÃ©rification documentaire du motif de virement", pct: 82 },
+  { key: "auth", label: "Authentification renforcée du donneur d'ordre", pct: 12 },
+  { key: "wallet", label: "Vérification du portefeuille source", pct: 25 },
+  { key: "aml", label: "Contrôle anti-blanchiment (AML / CFT)", pct: 38 },
+  { key: "benef", label: "Validation du bénéficiaire & sanctions", pct: 50 },
+  { key: "edd", label: "Conformité approfondie (EDD)", pct: 63 },
+  { key: "reserve", label: "Réservation des fonds", pct: 75 },
+  { key: "purpose_docs", label: "Vérification documentaire du motif de virement", pct: 82 },
   { key: "route", label: "Routage SWIFT / SEPA", pct: 88 },
   { key: "confirm", label: "Confirmation finale", pct: 100 },
 ];
@@ -54,35 +54,35 @@ type PurposeDoc = { code: string; label: string };
 
 const PURPOSE_OPTIONS: { value: string; label: string }[] = [
   { value: "immobilier", label: "Achat de bien immobilier" },
-  { value: "vehicule", label: "Achat de vÃ©hicule" },
-  { value: "objets_art", label: "Achat d'objets d'art / antiquitÃ©s" },
+  { value: "vehicule", label: "Achat de véhicule" },
+  { value: "objets_art", label: "Achat d'objets d'art / antiquités" },
   { value: "investissement", label: "Investissement / placement financier" },
   { value: "entreprise", label: "Investissement professionnel / entreprise" },
   { value: "don_familial", label: "Don familial" },
-  { value: "frais_scolarite", label: "Frais de scolaritÃ©" },
-  { value: "frais_medicaux", label: "Frais mÃ©dicaux" },
+  { value: "frais_scolarite", label: "Frais de scolarité" },
+  { value: "frais_medicaux", label: "Frais médicaux" },
   { value: "voyage", label: "Voyage / loisirs" },
   { value: "autre", label: "Autre motif" },
 ];
 
-// Motifs nÃ©cessitant des justificatifs additionnels avant de finaliser le virement.
+// Motifs nécessitant des justificatifs additionnels avant de finaliser le virement.
 function purposeRequiredDocs(purpose: string): PurposeDoc[] {
   if (purpose === "objets_art") {
     return [
-      { code: "art_certificate", label: "Certificat d'authenticitÃ© de l'Å“uvre / objet" },
-      { code: "art_ownership", label: "Titre de propriÃ©tÃ© / preuve de possession" },
+      { code: "art_certificate", label: "Certificat d'authenticité de l'œuvre / objet" },
+      { code: "art_ownership", label: "Titre de propriété / preuve de possession" },
     ];
   }
   if (purpose === "immobilier") {
     return [
-      { code: "real_estate_deed", label: "Acte notariÃ© / promesse de vente" },
-      { code: "real_estate_id", label: "PiÃ¨ce d'identitÃ© du notaire ou de l'Ã©tude" },
+      { code: "real_estate_deed", label: "Acte notarié / promesse de vente" },
+      { code: "real_estate_id", label: "Pièce d'identité du notaire ou de l'étude" },
     ];
   }
   if (purpose === "vehicule") {
     return [
-      { code: "vehicle_invoice", label: "Facture d'achat / bon de commande du vÃ©hicule" },
-      { code: "vehicle_registration", label: "Certificat d'immatriculation ou titre de propriÃ©tÃ© du vÃ©hicule" },
+      { code: "vehicle_invoice", label: "Facture d'achat / bon de commande du véhicule" },
+      { code: "vehicle_registration", label: "Certificat d'immatriculation ou titre de propriété du véhicule" },
     ];
   }
   return [];
@@ -110,7 +110,7 @@ function Dashboard() {
   const [blockReason, setBlockReason] = useState<string | null>(null);
   const [unlockCode, setUnlockCode] = useState("");
   const [unlocking, setUnlocking] = useState(false);
-  // Palier documentaire liÃ© au motif (ex: objets d'art) â€” blocage Ã  82%
+  // Palier documentaire lié au motif (ex: objets d'art) — blocage à 82%
   const [requiredPurposeDocs, setRequiredPurposeDocs] = useState<PurposeDoc[]>([]);
   const [purposeFiles, setPurposeFiles] = useState<Record<string, File | null>>({});
   const [submittingPurposeDocs, setSubmittingPurposeDocs] = useState(false);
@@ -149,7 +149,7 @@ function Dashboard() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    toast.success("DÃ©connectÃ©");
+    toast.success("Déconnecté");
     navigate({ to: "/auth", replace: true });
   }
 
@@ -193,16 +193,16 @@ function Dashboard() {
 
   function evaluateBlockReason(amount: number, recipient: string, kyc: string): string | null {
     if (kyc !== "approved" && kyc !== "verified") {
-      return "Votre dossier KYC n'est pas encore approuvÃ© par notre cellule conformitÃ©. Une vÃ©rification renforcÃ©e est requise avant tout virement sortant.";
+      return "Votre dossier KYC n'est pas encore approuvé par notre cellule conformité. Une vérification renforcée est requise avant tout virement sortant.";
     }
     const r = recipient.trim();
     const isTag = r.startsWith("@") && r.length >= 3;
     const isIban = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/i.test(r.replace(/\s+/g, ""));
     if (!isTag && !isIban) {
-      return "Le bÃ©nÃ©ficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrÃ´le sanctions et listes PEP a Ã©chouÃ©.";
+      return "Le bénéficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrôle sanctions et listes PEP a échoué.";
     }
     if (amount >= 10000) {
-      return "Virement Ã  montant Ã©levÃ© (â‰¥ 10 000). Un code de dÃ©blocage conformitÃ© (EDD) est obligatoire â€” contactez votre gestionnaire dÃ©diÃ©.";
+      return "Virement à montant élevé (≥ 10 000). Un code de déblocage conformité (EDD) est obligatoire — contactez votre gestionnaire dédié.";
     }
     return null;
   }
@@ -238,7 +238,7 @@ function Dashboard() {
         if (tId) await supabase.rpc("block_transfer" as never, { _id: tId, _reason: reason } as never);
         return;
       }
-      // Palier documentaire Ã  82% selon le motif du virement (ex: objets d'art)
+      // Palier documentaire à 82% selon le motif du virement (ex: objets d'art)
       if (list[i].key === "purpose_docs" && purposeDocs.length > 0) {
         list[i] = { ...list[i], status: "blocked" };
         setSteps([...list]);
@@ -248,7 +248,7 @@ function Dashboard() {
         if (tId) {
           await supabase.rpc("block_transfer_purpose" as never, {
             _id: tId,
-            _reason: "Le motif dÃ©clarÃ© nÃ©cessite des justificatifs complÃ©mentaires avant finalisation du virement.",
+            _reason: "Le motif déclaré nécessite des justificatifs complémentaires avant finalisation du virement.",
             _required: purposeDocs,
           } as never);
         }
@@ -264,7 +264,7 @@ function Dashboard() {
   }
 
   async function resumeFrom(stepKey: string, tId: string | null) {
-    // Reprend l'animation de la progress bar Ã  partir de l'Ã©tape juste aprÃ¨s stepKey
+    // Reprend l'animation de la progress bar à partir de l'étape juste après stepKey
     const idx = BASE_STEPS.findIndex((s) => s.key === stepKey) + 1;
     const list: VerifStep[] = steps.map((s) => (s.key === stepKey ? { ...s, status: "done" as StepStatus } : s));
     setSteps(list);
@@ -336,7 +336,7 @@ function Dashboard() {
   async function startTransfer(e: React.FormEvent) {
     e.preventDefault();
     const amount = parseFloat(transferAmount);
-    if (!transferFrom) return toast.error("SÃ©lectionnez un portefeuille");
+    if (!transferFrom) return toast.error("Sélectionnez un portefeuille");
     if (!transferTo.trim()) return toast.error("Destinataire requis");
     if (!amount || amount <= 0) return toast.error("Montant invalide");
     if (!transferPurpose) return toast.error("Le motif du virement est obligatoire");
@@ -369,7 +369,7 @@ function Dashboard() {
     await new Promise((r) => setTimeout(r, 700));
     if (unlockCode.trim().toUpperCase() !== COMPLIANCE_CODE) {
       setUnlocking(false);
-      toast.error("Code de dÃ©blocage invalide", { description: "Contactez votre gestionnaire dÃ©diÃ©." });
+      toast.error("Code de déblocage invalide", { description: "Contactez votre gestionnaire dédié." });
       return;
     }
     setUnlocking(false);
@@ -383,8 +383,8 @@ function Dashboard() {
     if (phase === "success") {
       const w = (wallets ?? []).find((x) => x.id === transferFrom);
       toast.success(
-        `Transfert de ${parseFloat(transferAmount).toLocaleString("fr-CA")} ${w?.currency ?? ""} confirmÃ© vers ${transferTo}`,
-        { description: "ReÃ§u disponible dans votre historique conformitÃ©." },
+        `Transfert de ${parseFloat(transferAmount).toLocaleString("fr-CA")} ${w?.currency ?? ""} confirmé vers ${transferTo}`,
+        { description: "Reçu disponible dans votre historique conformité." },
       );
     }
   }
@@ -428,11 +428,11 @@ function Dashboard() {
               <ShieldCheck className="w-5 h-5 text-gold-gradient mt-0.5" />
               <div>
                 <p className="text-sm font-medium">
-                  VÃ©rification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
+                  Vérification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xl">
                   {profile.kyc_status === "review"
-                    ? "Votre dossier a Ã©tÃ© reÃ§u. Un administrateur va le valider, votre carte standard sera alors activÃ©e automatiquement."
+                    ? "Votre dossier a été reçu. Un administrateur va le valider, votre carte standard sera alors activée automatiquement."
                     : "Soumettez votre dossier KYC pour activer votre carte standard et lever les restrictions sur vos virements."}
                 </p>
               </div>
@@ -452,7 +452,7 @@ function Dashboard() {
               {formatAmount(totalCad, "CAD", ghost)}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {greet(profile?.full_name, profile?.email)} Â· Statut KYC :{" "}
+              {greet(profile?.full_name, profile?.email)} · Statut KYC :{" "}
               <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
             </p>
           </div>
@@ -485,7 +485,7 @@ function Dashboard() {
             <ArrowUpRight className="w-5 h-5 text-primary" />
             <div>
               <p className="text-sm font-medium">Envoyer</p>
-              <p className="text-[11px] text-muted-foreground">Transfert sÃ©curisÃ©</p>
+              <p className="text-[11px] text-muted-foreground">Transfert sécurisé</p>
             </div>
           </button>
           <button onClick={() => setReceiveOpen(true)} className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition text-left">
@@ -520,7 +520,7 @@ function Dashboard() {
                     {formatAmount(Number(w.balance), w.currency, ghost)}
                   </p>
                   <p className={`text-xs mt-1 tracking-wider ${w.is_primary ? "text-white/50" : "text-muted-foreground"}`}>
-                    â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {w.id.slice(-4).toUpperCase()}
+                    •••• •••• •••• {w.id.slice(-4).toUpperCase()}
                   </p>
                 </div>
               </div>
@@ -531,25 +531,25 @@ function Dashboard() {
         <section className="grid md:grid-cols-3 gap-5">
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Shield className="w-5 h-5 text-primary mb-3" />
-            <h3 className="font-display font-semibold mb-1">ConformitÃ© active</h3>
-            <p className="text-sm text-muted-foreground">Vos transactions sont surveillÃ©es par notre cellule EDD 24/7.</p>
+            <h3 className="font-display font-semibold mb-1">Conformité active</h3>
+            <p className="text-sm text-muted-foreground">Vos transactions sont surveillées par notre cellule EDD 24/7.</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Sparkles className="w-5 h-5 text-primary mb-3" />
             <h3 className="font-display font-semibold mb-1">Ghost Mode</h3>
-            <p className="text-sm text-muted-foreground">Masquez vos soldes d'un geste pour prÃ©server votre discrÃ©tion.</p>
+            <p className="text-sm text-muted-foreground">Masquez vos soldes d'un geste pour préserver votre discrétion.</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <ArrowUpRight className="w-5 h-5 text-primary mb-3" />
             <h3 className="font-display font-semibold mb-1">Transferts P2P</h3>
-            <p className="text-sm text-muted-foreground">BientÃ´t disponible : virements en temps rÃ©el avec jauge de progression.</p>
+            <p className="text-sm text-muted-foreground">Bientôt disponible : virements en temps réel avec jauge de progression.</p>
           </div>
         </section>
 
         <section>
-          <h2 className="font-display text-xl mb-5 text-muted-foreground">ActivitÃ© rÃ©cente</h2>
+          <h2 className="font-display text-xl mb-5 text-muted-foreground">Activité récente</h2>
           <div className="rounded-xl border border-border bg-surface/30 p-12 text-center text-sm text-muted-foreground">
-            Aucune transaction pour le moment. Les flux apparaÃ®tront ici en temps rÃ©el.
+            Aucune transaction pour le moment. Les flux apparaîtront ici en temps réel.
           </div>
         </section>
       </main>
@@ -559,17 +559,17 @@ function Dashboard() {
           <DialogHeader>
             <DialogTitle className="font-display">
               {phase === "form" && "Nouveau transfert"}
-              {phase === "verifying" && "VÃ©rification en cours"}
+              {phase === "verifying" && "Vérification en cours"}
               {phase === "blocked" && "Transfert suspendu"}
               {phase === "documents" && "Justificatifs requis"}
-              {phase === "success" && "Transfert confirmÃ©"}
+              {phase === "success" && "Transfert confirmé"}
             </DialogTitle>
             <DialogDescription>
               {phase === "form" && "Envoyez des fonds vers un autre client Valtis ou un IBAN."}
-              {phase === "verifying" && "Notre moteur conformitÃ© valide chaque Ã©tape en temps rÃ©el."}
-              {phase === "blocked" && "Une Ã©tape de conformitÃ© requiert votre attention."}
-              {phase === "documents" && "Le motif dÃ©clarÃ© nÃ©cessite des documents complÃ©mentaires avant finalisation."}
-              {phase === "success" && "Toutes les vÃ©rifications ont Ã©tÃ© franchies avec succÃ¨s."}
+              {phase === "verifying" && "Notre moteur conformité valide chaque étape en temps réel."}
+              {phase === "blocked" && "Une étape de conformité requiert votre attention."}
+              {phase === "documents" && "Le motif déclaré nécessite des documents complémentaires avant finalisation."}
+              {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
             </DialogDescription>
           </DialogHeader>
 
@@ -582,7 +582,7 @@ function Dashboard() {
                 <SelectContent>
                   {(wallets ?? []).map((w) => (
                     <SelectItem key={w.id} value={w.id}>
-                      {w.label} Â· {formatAmount(Number(w.balance), w.currency, ghost)}
+                      {w.label} · {formatAmount(Number(w.balance), w.currency, ghost)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -599,7 +599,7 @@ function Dashboard() {
             <div className="space-y-2">
               <Label>Motif du virement</Label>
               <Select value={transferPurpose} onValueChange={setTransferPurpose}>
-                <SelectTrigger><SelectValue placeholder="SÃ©lectionnez un motif" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un motif" /></SelectTrigger>
                 <SelectContent>
                   {PURPOSE_OPTIONS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
@@ -607,16 +607,16 @@ function Dashboard() {
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Champ obligatoire â€” certains motifs (ex. objets d'art) dÃ©clenchent une demande de justificatifs.
+                Champ obligatoire — certains motifs (ex. objets d'art) déclenchent une demande de justificatifs.
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ref">RÃ©fÃ©rence (optionnel)</Label>
-              <Input id="ref" placeholder="PrÃ©cisions complÃ©mentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
+              <Label htmlFor="ref">Référence (optionnel)</Label>
+              <Input id="ref" placeholder="Précisions complémentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={closeTransferDialog}>Annuler</Button>
-              <Button type="submit" variant="gold">Lancer la vÃ©rification</Button>
+              <Button type="submit" variant="gold">Lancer la vérification</Button>
             </DialogFooter>
           </form>
           )}
@@ -625,7 +625,7 @@ function Dashboard() {
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs mb-2">
-                  <span className="text-muted-foreground">Progression conformitÃ©</span>
+                  <span className="text-muted-foreground">Progression conformité</span>
                   <span className={phase === "blocked" || phase === "documents" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
                     {Math.round(progress)}%
                   </span>
@@ -656,7 +656,7 @@ function Dashboard() {
                     <p className="text-sm text-destructive">{blockReason}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="unlock" className="text-xs">Code de dÃ©blocage conformitÃ©</Label>
+                    <Label htmlFor="unlock" className="text-xs">Code de déblocage conformité</Label>
                     <Input
                       id="unlock"
                       placeholder="VALTIS-XXXX"
@@ -664,13 +664,13 @@ function Dashboard() {
                       onChange={(e) => setUnlockCode(e.target.value)}
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Ce code vous est transmis par votre gestionnaire aprÃ¨s revue du dossier EDD.
+                      Ce code vous est transmis par votre gestionnaire après revue du dossier EDD.
                     </p>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
                     <Button variant="gold" size="sm" onClick={submitUnlock} disabled={unlocking || !unlockCode}>
-                      {unlocking ? "VÃ©rificationâ€¦" : "DÃ©bloquer"}
+                      {unlocking ? "Vérification…" : "Débloquer"}
                     </Button>
                   </div>
                 </div>
@@ -681,7 +681,7 @@ function Dashboard() {
                   <div className="flex gap-2 items-start">
                     <Lock className="w-4 h-4 text-destructive mt-0.5" />
                     <p className="text-sm text-destructive">
-                      Motif Â« {PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label} Â» : justificatifs obligatoires avant de poursuivre au-delÃ  de 82%.
+                      Motif « {PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label} » : justificatifs obligatoires avant de poursuivre au-delà de 82%.
                     </p>
                   </div>
                   {requiredPurposeDocs.map((doc) => (
@@ -699,7 +699,7 @@ function Dashboard() {
                       />
                       {purposeFiles[doc.code] && (
                         <p className="text-[11px] text-muted-foreground">
-                          {purposeFiles[doc.code]!.name} Â· {(purposeFiles[doc.code]!.size / 1024).toFixed(0)} Ko
+                          {purposeFiles[doc.code]!.name} · {(purposeFiles[doc.code]!.size / 1024).toFixed(0)} Ko
                         </p>
                       )}
                     </div>
@@ -707,7 +707,7 @@ function Dashboard() {
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
                     <Button variant="gold" size="sm" onClick={submitPurposeDocuments} disabled={submittingPurposeDocs}>
-                      {submittingPurposeDocs ? "Envoiâ€¦" : "Soumettre les documents"}
+                      {submittingPurposeDocs ? "Envoi…" : "Soumettre les documents"}
                     </Button>
                   </div>
                 </div>
@@ -717,9 +717,9 @@ function Dashboard() {
                 <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm flex gap-2 items-start">
                   <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <div>
-                    <p className="font-medium">Virement exÃ©cutÃ©</p>
+                    <p className="font-medium">Virement exécuté</p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      RÃ©fÃ©rence : VLT-{Date.now().toString(36).toUpperCase()} â€” fonds routÃ©s vers {transferTo}.
+                      Référence : VLT-{Date.now().toString(36).toUpperCase()} — fonds routés vers {transferTo}.
                     </p>
                   </div>
                 </div>
@@ -754,7 +754,7 @@ function Dashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">Recevoir des fonds</DialogTitle>
-            <DialogDescription>Partagez votre tag Valtis ou vos coordonnÃ©es bancaires.</DialogDescription>
+            <DialogDescription>Partagez votre tag Valtis ou vos coordonnées bancaires.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
             <div className="rounded-xl border border-gold/30 bg-gold/5 p-5 text-center">
@@ -762,7 +762,7 @@ function Dashboard() {
               <p className="font-display text-2xl text-gold-gradient">{valtisTag}</p>
               <Button variant="ghost-gold" size="sm" className="mt-3" onClick={copyTag}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? "CopiÃ©" : "Copier le tag"}
+                {copied ? "Copié" : "Copier le tag"}
               </Button>
             </div>
             {primaryWallet && (
@@ -774,7 +774,7 @@ function Dashboard() {
               </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              Les fonds reÃ§us sont disponibles immÃ©diatement aprÃ¨s contrÃ´le conformitÃ©.
+              Les fonds reçus sont disponibles immédiatement après contrôle conformité.
             </p>
           </div>
         </DialogContent>
