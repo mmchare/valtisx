@@ -49,6 +49,8 @@ const BASE_STEPS: Omit<VerifStep, "status">[] = [
 ];
 
 const COMPLIANCE_CODE = "VALTIS-2026";
+// Codes de déblocage EDD valides (utile en phase de test pour débloquer sans attendre un gestionnaire réel)
+const COMPLIANCE_CODES = [COMPLIANCE_CODE, "ISMA-1441"];
 
 type PurposeDoc = { code: string; label: string };
 
@@ -114,6 +116,9 @@ function Dashboard() {
   const [requiredPurposeDocs, setRequiredPurposeDocs] = useState<PurposeDoc[]>([]);
   const [purposeFiles, setPurposeFiles] = useState<Record<string, File | null>>({});
   const [submittingPurposeDocs, setSubmittingPurposeDocs] = useState(false);
+  // Documents nécessaires calculés au lancement du virement — persiste tout au long du parcours
+  // (y compris après une reprise post-déblocage EDD) pour que le palier 82% soit toujours vérifié.
+  const [purposeDocsNeeded, setPurposeDocsNeeded] = useState<PurposeDoc[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -188,6 +193,7 @@ function Dashboard() {
     setTransferId(null);
     setRequiredPurposeDocs([]);
     setPurposeFiles({});
+    setPurposeDocsNeeded([]);
     setTransferOpen(true);
   }
 
@@ -207,17 +213,13 @@ function Dashboard() {
     return null;
   }
 
-  async function runVerification(reason: string | null, tId: string | null, purposeDocs: PurposeDoc[]) {
-    // Build fresh step list
-    const list: VerifStep[] = BASE_STEPS.map((s) => ({ ...s, status: "pending" }));
-    setSteps(list);
-    setProgress(0);
-
-    for (let i = 0; i < list.length; i++) {
-      // mark running
+  // Fait avancer la jauge de conformité de startIndex jusqu'à la fin (ou jusqu'au prochain palier bloquant).
+  // Utilisée à la fois pour le lancement initial ET pour toute reprise (post-EDD, post-documents),
+  // afin qu'AUCUN palier ne soit sauté quel que soit le point de départ.
+  async function advanceSteps(list: VerifStep[], startIndex: number, reason: string | null, purposeDocs: PurposeDoc[], tId: string | null) {
+    for (let i = startIndex; i < list.length; i++) {
       list[i] = { ...list[i], status: "running" };
       setSteps([...list]);
-      // animate progress towards this step's pct
       const prevPct = i === 0 ? 0 : list[i - 1].pct;
       const targetPct = list[i].pct;
       const ticks = 14;
@@ -228,7 +230,7 @@ function Dashboard() {
       if (tId) {
         await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: list[i].pct, _step: list[i].key } as never);
       }
-      // EDD gate at 63%
+      // EDD gate à 63%
       if (list[i].key === "edd" && reason) {
         list[i] = { ...list[i], status: "blocked" };
         setSteps([...list]);
@@ -263,32 +265,20 @@ function Dashboard() {
     setPhase("success");
   }
 
-  async function resumeFrom(stepKey: string, tId: string | null) {
-    // Reprend l'animation de la progress bar à partir de l'étape juste après stepKey
+  async function runVerification(reason: string | null, tId: string | null, purposeDocs: PurposeDoc[]) {
+    const list: VerifStep[] = BASE_STEPS.map((s) => ({ ...s, status: "pending" }));
+    setSteps(list);
+    setProgress(0);
+    await advanceSteps(list, 0, reason, purposeDocs, tId);
+  }
+
+  // Reprend après un palier franchi (EDD débloqué par code, ou documents de motif soumis).
+  // On repasse `purposeDocs` à chaque reprise pour ne jamais sauter le palier 82% s'il reste à passer.
+  async function resumeFrom(stepKey: string, tId: string | null, purposeDocs: PurposeDoc[]) {
     const idx = BASE_STEPS.findIndex((s) => s.key === stepKey) + 1;
     const list: VerifStep[] = steps.map((s) => (s.key === stepKey ? { ...s, status: "done" as StepStatus } : s));
     setSteps(list);
-    const tail = [...list];
-    for (let i = idx; i < tail.length; i++) {
-      tail[i] = { ...tail[i], status: "running" };
-      setSteps([...tail]);
-      const prevPct = tail[i - 1].pct;
-      const targetPct = tail[i].pct;
-      const ticks = 14;
-      for (let t = 1; t <= ticks; t++) {
-        await new Promise((r) => setTimeout(r, 55));
-        setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
-      }
-      if (tId) {
-        await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: tail[i].pct, _step: tail[i].key } as never);
-      }
-      tail[i] = { ...tail[i], status: "done" };
-      setSteps([...tail]);
-    }
-    setProgress(100);
-    if (tId) await supabase.rpc("complete_transfer" as never, { _id: tId } as never);
-    qc.invalidateQueries({ queryKey: ["wallets"] });
-    setPhase("success");
+    await advanceSteps(list, idx, null, purposeDocs, tId);
   }
 
   async function submitPurposeDocuments() {
@@ -330,7 +320,8 @@ function Dashboard() {
     if (error) return toast.error(error.message);
     toast.success("Documents transmis", { description: "Le virement reprend son cours." });
     setPhase("verifying");
-    void resumeFrom("purpose_docs", transferId);
+    // Une fois les documents soumis, ce palier est satisfait : on ne le repropose pas (liste vide).
+    void resumeFrom("purpose_docs", transferId, []);
   }
 
   async function startTransfer(e: React.FormEvent) {
@@ -345,6 +336,7 @@ function Dashboard() {
     if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
     const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
     const docsNeeded = purposeRequiredDocs(transferPurpose);
+    setPurposeDocsNeeded(docsNeeded);
     setPhase("verifying");
     // Create the transfer record server-side (notifies sender + recipient if known)
     const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
@@ -367,7 +359,7 @@ function Dashboard() {
   async function submitUnlock() {
     setUnlocking(true);
     await new Promise((r) => setTimeout(r, 700));
-    if (unlockCode.trim().toUpperCase() !== COMPLIANCE_CODE) {
+    if (!COMPLIANCE_CODES.includes(unlockCode.trim().toUpperCase())) {
       setUnlocking(false);
       toast.error("Code de déblocage invalide", { description: "Contactez votre gestionnaire dédié." });
       return;
@@ -375,7 +367,7 @@ function Dashboard() {
     setUnlocking(false);
     setBlockReason(null);
     setPhase("verifying");
-    void resumeFrom("edd", transferId);
+    void resumeFrom("edd", transferId, purposeDocsNeeded);
   }
 
   function closeTransferDialog() {
