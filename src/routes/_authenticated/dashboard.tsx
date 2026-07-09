@@ -20,7 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Tableau de bord · Valtis" }] }),
+  head: () => ({ meta: [{ title: "Tableau de bord Â· Valtis" }] }),
   component: Dashboard,
 });
 
@@ -37,17 +37,56 @@ type StepStatus = "pending" | "running" | "done" | "blocked";
 type VerifStep = { key: string; label: string; pct: number; status: StepStatus };
 
 const BASE_STEPS: Omit<VerifStep, "status">[] = [
-  { key: "auth", label: "Authentification renforcée du donneur d'ordre", pct: 12 },
-  { key: "wallet", label: "Vérification du portefeuille source", pct: 25 },
-  { key: "aml", label: "Contrôle anti-blanchiment (AML / CFT)", pct: 38 },
-  { key: "benef", label: "Validation du bénéficiaire & sanctions", pct: 50 },
-  { key: "edd", label: "Conformité approfondie (EDD)", pct: 63 },
-  { key: "reserve", label: "Réservation des fonds", pct: 75 },
+  { key: "auth", label: "Authentification renforcÃ©e du donneur d'ordre", pct: 12 },
+  { key: "wallet", label: "VÃ©rification du portefeuille source", pct: 25 },
+  { key: "aml", label: "ContrÃ´le anti-blanchiment (AML / CFT)", pct: 38 },
+  { key: "benef", label: "Validation du bÃ©nÃ©ficiaire & sanctions", pct: 50 },
+  { key: "edd", label: "ConformitÃ© approfondie (EDD)", pct: 63 },
+  { key: "reserve", label: "RÃ©servation des fonds", pct: 75 },
+  { key: "purpose_docs", label: "VÃ©rification documentaire du motif de virement", pct: 82 },
   { key: "route", label: "Routage SWIFT / SEPA", pct: 88 },
   { key: "confirm", label: "Confirmation finale", pct: 100 },
 ];
 
 const COMPLIANCE_CODE = "VALTIS-2026";
+
+type PurposeDoc = { code: string; label: string };
+
+const PURPOSE_OPTIONS: { value: string; label: string }[] = [
+  { value: "immobilier", label: "Achat de bien immobilier" },
+  { value: "vehicule", label: "Achat de vÃ©hicule" },
+  { value: "objets_art", label: "Achat d'objets d'art / antiquitÃ©s" },
+  { value: "investissement", label: "Investissement / placement financier" },
+  { value: "entreprise", label: "Investissement professionnel / entreprise" },
+  { value: "don_familial", label: "Don familial" },
+  { value: "frais_scolarite", label: "Frais de scolaritÃ©" },
+  { value: "frais_medicaux", label: "Frais mÃ©dicaux" },
+  { value: "voyage", label: "Voyage / loisirs" },
+  { value: "autre", label: "Autre motif" },
+];
+
+// Motifs nÃ©cessitant des justificatifs additionnels avant de finaliser le virement.
+function purposeRequiredDocs(purpose: string): PurposeDoc[] {
+  if (purpose === "objets_art") {
+    return [
+      { code: "art_certificate", label: "Certificat d'authenticitÃ© de l'Å“uvre / objet" },
+      { code: "art_ownership", label: "Titre de propriÃ©tÃ© / preuve de possession" },
+    ];
+  }
+  if (purpose === "immobilier") {
+    return [
+      { code: "real_estate_deed", label: "Acte notariÃ© / promesse de vente" },
+      { code: "real_estate_id", label: "PiÃ¨ce d'identitÃ© du notaire ou de l'Ã©tude" },
+    ];
+  }
+  if (purpose === "vehicule") {
+    return [
+      { code: "vehicle_invoice", label: "Facture d'achat / bon de commande du vÃ©hicule" },
+      { code: "vehicle_registration", label: "Certificat d'immatriculation ou titre de propriÃ©tÃ© du vÃ©hicule" },
+    ];
+  }
+  return [];
+}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -63,13 +102,18 @@ function Dashboard() {
   const [transferTo, setTransferTo] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferRef, setTransferRef] = useState("");
+  const [transferPurpose, setTransferPurpose] = useState("");
   // Verification simulation state
-  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "success">("form");
+  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "success">("form");
   const [steps, setSteps] = useState<VerifStep[]>([]);
   const [progress, setProgress] = useState(0);
   const [blockReason, setBlockReason] = useState<string | null>(null);
   const [unlockCode, setUnlockCode] = useState("");
   const [unlocking, setUnlocking] = useState(false);
+  // Palier documentaire liÃ© au motif (ex: objets d'art) â€” blocage Ã  82%
+  const [requiredPurposeDocs, setRequiredPurposeDocs] = useState<PurposeDoc[]>([]);
+  const [purposeFiles, setPurposeFiles] = useState<Record<string, File | null>>({});
+  const [submittingPurposeDocs, setSubmittingPurposeDocs] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -105,7 +149,7 @@ function Dashboard() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    toast.success("Déconnecté");
+    toast.success("DÃ©connectÃ©");
     navigate({ to: "/auth", replace: true });
   }
 
@@ -135,32 +179,35 @@ function Dashboard() {
     setTransferTo("");
     setTransferAmount("");
     setTransferRef("");
+    setTransferPurpose("");
     setPhase("form");
     setSteps([]);
     setProgress(0);
     setBlockReason(null);
     setUnlockCode("");
     setTransferId(null);
+    setRequiredPurposeDocs([]);
+    setPurposeFiles({});
     setTransferOpen(true);
   }
 
   function evaluateBlockReason(amount: number, recipient: string, kyc: string): string | null {
     if (kyc !== "approved" && kyc !== "verified") {
-      return "Votre dossier KYC n'est pas encore approuvé par notre cellule conformité. Une vérification renforcée est requise avant tout virement sortant.";
+      return "Votre dossier KYC n'est pas encore approuvÃ© par notre cellule conformitÃ©. Une vÃ©rification renforcÃ©e est requise avant tout virement sortant.";
     }
     const r = recipient.trim();
     const isTag = r.startsWith("@") && r.length >= 3;
     const isIban = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/i.test(r.replace(/\s+/g, ""));
     if (!isTag && !isIban) {
-      return "Le bénéficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrôle sanctions et listes PEP a échoué.";
+      return "Le bÃ©nÃ©ficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrÃ´le sanctions et listes PEP a Ã©chouÃ©.";
     }
     if (amount >= 10000) {
-      return "Virement à montant élevé (≥ 10 000). Un code de déblocage conformité (EDD) est obligatoire — contactez votre gestionnaire dédié.";
+      return "Virement Ã  montant Ã©levÃ© (â‰¥ 10 000). Un code de dÃ©blocage conformitÃ© (EDD) est obligatoire â€” contactez votre gestionnaire dÃ©diÃ©.";
     }
     return null;
   }
 
-  async function runVerification(reason: string | null, tId: string | null) {
+  async function runVerification(reason: string | null, tId: string | null, purposeDocs: PurposeDoc[]) {
     // Build fresh step list
     const list: VerifStep[] = BASE_STEPS.map((s) => ({ ...s, status: "pending" }));
     setSteps(list);
@@ -191,6 +238,22 @@ function Dashboard() {
         if (tId) await supabase.rpc("block_transfer" as never, { _id: tId, _reason: reason } as never);
         return;
       }
+      // Palier documentaire Ã  82% selon le motif du virement (ex: objets d'art)
+      if (list[i].key === "purpose_docs" && purposeDocs.length > 0) {
+        list[i] = { ...list[i], status: "blocked" };
+        setSteps([...list]);
+        setProgress(82);
+        setRequiredPurposeDocs(purposeDocs);
+        setPhase("documents");
+        if (tId) {
+          await supabase.rpc("block_transfer_purpose" as never, {
+            _id: tId,
+            _reason: "Le motif dÃ©clarÃ© nÃ©cessite des justificatifs complÃ©mentaires avant finalisation du virement.",
+            _required: purposeDocs,
+          } as never);
+        }
+        return;
+      }
       list[i] = { ...list[i], status: "done" };
       setSteps([...list]);
     }
@@ -200,54 +263,13 @@ function Dashboard() {
     setPhase("success");
   }
 
-  async function startTransfer(e: React.FormEvent) {
-    e.preventDefault();
-    const amount = parseFloat(transferAmount);
-    if (!transferFrom) return toast.error("Sélectionnez un portefeuille");
-    if (!transferTo.trim()) return toast.error("Destinataire requis");
-    if (!amount || amount <= 0) return toast.error("Montant invalide");
-    const w = (wallets ?? []).find((x) => x.id === transferFrom);
-    if (!w) return toast.error("Portefeuille introuvable");
-    if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
-    const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
-    setPhase("verifying");
-    // Create the transfer record server-side (notifies sender + recipient if known)
-    const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
-      _from_wallet: transferFrom,
-      _recipient: transferTo.trim(),
-      _amount: amount,
-      _reference: transferRef || null,
-    } as never);
-    if (error) {
-      toast.error(error.message);
-      setPhase("form");
-      return;
-    }
-    const id = (tId as unknown) as string;
-    setTransferId(id);
-    void runVerification(reason, id);
-  }
-
-  async function submitUnlock() {
-    setUnlocking(true);
-    await new Promise((r) => setTimeout(r, 700));
-    if (unlockCode.trim().toUpperCase() !== COMPLIANCE_CODE) {
-      setUnlocking(false);
-      toast.error("Code de déblocage invalide", { description: "Contactez votre gestionnaire dédié." });
-      return;
-    }
-    setUnlocking(false);
-    // Resume from EDD step
-    const list = steps.map((s) =>
-      s.key === "edd" ? { ...s, status: "done" as StepStatus } : s,
-    );
+  async function resumeFrom(stepKey: string, tId: string | null) {
+    // Reprend l'animation de la progress bar Ã  partir de l'Ã©tape juste aprÃ¨s stepKey
+    const idx = BASE_STEPS.findIndex((s) => s.key === stepKey) + 1;
+    const list: VerifStep[] = steps.map((s) => (s.key === stepKey ? { ...s, status: "done" as StepStatus } : s));
     setSteps(list);
-    setBlockReason(null);
-    setPhase("verifying");
-    // continue remaining steps
-    const remaining = BASE_STEPS.findIndex((s) => s.key === "edd") + 1;
-    const tail: VerifStep[] = [...list];
-    for (let i = remaining; i < tail.length; i++) {
+    const tail = [...list];
+    for (let i = idx; i < tail.length; i++) {
       tail[i] = { ...tail[i], status: "running" };
       setSteps([...tail]);
       const prevPct = tail[i - 1].pct;
@@ -257,16 +279,103 @@ function Dashboard() {
         await new Promise((r) => setTimeout(r, 55));
         setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
       }
-      if (transferId) {
-        await supabase.rpc("update_transfer_progress" as never, { _id: transferId, _progress: tail[i].pct, _step: tail[i].key } as never);
+      if (tId) {
+        await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: tail[i].pct, _step: tail[i].key } as never);
       }
       tail[i] = { ...tail[i], status: "done" };
       setSteps([...tail]);
     }
     setProgress(100);
-    if (transferId) await supabase.rpc("complete_transfer" as never, { _id: transferId } as never);
+    if (tId) await supabase.rpc("complete_transfer" as never, { _id: tId } as never);
     qc.invalidateQueries({ queryKey: ["wallets"] });
     setPhase("success");
+  }
+
+  async function submitPurposeDocuments() {
+    const missing = requiredPurposeDocs.filter((d) => !purposeFiles[d.code]);
+    if (missing.length > 0) {
+      return toast.error(`Merci de fournir : ${missing.map((d) => d.label).join(", ")}`);
+    }
+    setSubmittingPurposeDocs(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid || !transferId) {
+      setSubmittingPurposeDocs(false);
+      return toast.error("Session ou transfert introuvable");
+    }
+    const documents: { code: string; label: string; doc_url: string }[] = [];
+    for (const doc of requiredPurposeDocs) {
+      const file = purposeFiles[doc.code]!;
+      if (file.size > 8 * 1024 * 1024) {
+        setSubmittingPurposeDocs(false);
+        return toast.error(`${doc.label} : fichier trop lourd (max 8 Mo)`);
+      }
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+      const path = `${uid}/purpose-${doc.code}-${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("kyc-documents").upload(path, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (up.error) {
+        setSubmittingPurposeDocs(false);
+        return toast.error(`${doc.label} : ${up.error.message}`);
+      }
+      documents.push({ code: doc.code, label: doc.label, doc_url: path });
+    }
+    const { error } = await supabase.rpc("submit_transfer_purpose_documents" as never, {
+      _id: transferId,
+      _documents: documents,
+    } as never);
+    setSubmittingPurposeDocs(false);
+    if (error) return toast.error(error.message);
+    toast.success("Documents transmis", { description: "Le virement reprend son cours." });
+    setPhase("verifying");
+    void resumeFrom("purpose_docs", transferId);
+  }
+
+  async function startTransfer(e: React.FormEvent) {
+    e.preventDefault();
+    const amount = parseFloat(transferAmount);
+    if (!transferFrom) return toast.error("SÃ©lectionnez un portefeuille");
+    if (!transferTo.trim()) return toast.error("Destinataire requis");
+    if (!amount || amount <= 0) return toast.error("Montant invalide");
+    if (!transferPurpose) return toast.error("Le motif du virement est obligatoire");
+    const w = (wallets ?? []).find((x) => x.id === transferFrom);
+    if (!w) return toast.error("Portefeuille introuvable");
+    if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
+    const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
+    const docsNeeded = purposeRequiredDocs(transferPurpose);
+    setPhase("verifying");
+    // Create the transfer record server-side (notifies sender + recipient if known)
+    const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
+      _from_wallet: transferFrom,
+      _recipient: transferTo.trim(),
+      _amount: amount,
+      _reference: transferRef || null,
+      _purpose: transferPurpose,
+    } as never);
+    if (error) {
+      toast.error(error.message);
+      setPhase("form");
+      return;
+    }
+    const id = (tId as unknown) as string;
+    setTransferId(id);
+    void runVerification(reason, id, docsNeeded);
+  }
+
+  async function submitUnlock() {
+    setUnlocking(true);
+    await new Promise((r) => setTimeout(r, 700));
+    if (unlockCode.trim().toUpperCase() !== COMPLIANCE_CODE) {
+      setUnlocking(false);
+      toast.error("Code de dÃ©blocage invalide", { description: "Contactez votre gestionnaire dÃ©diÃ©." });
+      return;
+    }
+    setUnlocking(false);
+    setBlockReason(null);
+    setPhase("verifying");
+    void resumeFrom("edd", transferId);
   }
 
   function closeTransferDialog() {
@@ -274,8 +383,8 @@ function Dashboard() {
     if (phase === "success") {
       const w = (wallets ?? []).find((x) => x.id === transferFrom);
       toast.success(
-        `Transfert de ${parseFloat(transferAmount).toLocaleString("fr-CA")} ${w?.currency ?? ""} confirmé vers ${transferTo}`,
-        { description: "Reçu disponible dans votre historique conformité." },
+        `Transfert de ${parseFloat(transferAmount).toLocaleString("fr-CA")} ${w?.currency ?? ""} confirmÃ© vers ${transferTo}`,
+        { description: "ReÃ§u disponible dans votre historique conformitÃ©." },
       );
     }
   }
@@ -319,11 +428,11 @@ function Dashboard() {
               <ShieldCheck className="w-5 h-5 text-gold-gradient mt-0.5" />
               <div>
                 <p className="text-sm font-medium">
-                  Vérification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
+                  VÃ©rification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xl">
                   {profile.kyc_status === "review"
-                    ? "Votre dossier a été reçu. Un administrateur va le valider, votre carte standard sera alors activée automatiquement."
+                    ? "Votre dossier a Ã©tÃ© reÃ§u. Un administrateur va le valider, votre carte standard sera alors activÃ©e automatiquement."
                     : "Soumettez votre dossier KYC pour activer votre carte standard et lever les restrictions sur vos virements."}
                 </p>
               </div>
@@ -343,7 +452,7 @@ function Dashboard() {
               {formatAmount(totalCad, "CAD", ghost)}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {greet(profile?.full_name, profile?.email)} · Statut KYC :{" "}
+              {greet(profile?.full_name, profile?.email)} Â· Statut KYC :{" "}
               <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
             </p>
           </div>
@@ -376,7 +485,7 @@ function Dashboard() {
             <ArrowUpRight className="w-5 h-5 text-primary" />
             <div>
               <p className="text-sm font-medium">Envoyer</p>
-              <p className="text-[11px] text-muted-foreground">Transfert sécurisé</p>
+              <p className="text-[11px] text-muted-foreground">Transfert sÃ©curisÃ©</p>
             </div>
           </button>
           <button onClick={() => setReceiveOpen(true)} className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition text-left">
@@ -411,7 +520,7 @@ function Dashboard() {
                     {formatAmount(Number(w.balance), w.currency, ghost)}
                   </p>
                   <p className={`text-xs mt-1 tracking-wider ${w.is_primary ? "text-white/50" : "text-muted-foreground"}`}>
-                    •••• •••• •••• {w.id.slice(-4).toUpperCase()}
+                    â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {w.id.slice(-4).toUpperCase()}
                   </p>
                 </div>
               </div>
@@ -422,25 +531,25 @@ function Dashboard() {
         <section className="grid md:grid-cols-3 gap-5">
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Shield className="w-5 h-5 text-primary mb-3" />
-            <h3 className="font-display font-semibold mb-1">Conformité active</h3>
-            <p className="text-sm text-muted-foreground">Vos transactions sont surveillées par notre cellule EDD 24/7.</p>
+            <h3 className="font-display font-semibold mb-1">ConformitÃ© active</h3>
+            <p className="text-sm text-muted-foreground">Vos transactions sont surveillÃ©es par notre cellule EDD 24/7.</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Sparkles className="w-5 h-5 text-primary mb-3" />
             <h3 className="font-display font-semibold mb-1">Ghost Mode</h3>
-            <p className="text-sm text-muted-foreground">Masquez vos soldes d'un geste pour préserver votre discrétion.</p>
+            <p className="text-sm text-muted-foreground">Masquez vos soldes d'un geste pour prÃ©server votre discrÃ©tion.</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <ArrowUpRight className="w-5 h-5 text-primary mb-3" />
             <h3 className="font-display font-semibold mb-1">Transferts P2P</h3>
-            <p className="text-sm text-muted-foreground">Bientôt disponible : virements en temps réel avec jauge de progression.</p>
+            <p className="text-sm text-muted-foreground">BientÃ´t disponible : virements en temps rÃ©el avec jauge de progression.</p>
           </div>
         </section>
 
         <section>
-          <h2 className="font-display text-xl mb-5 text-muted-foreground">Activité récente</h2>
+          <h2 className="font-display text-xl mb-5 text-muted-foreground">ActivitÃ© rÃ©cente</h2>
           <div className="rounded-xl border border-border bg-surface/30 p-12 text-center text-sm text-muted-foreground">
-            Aucune transaction pour le moment. Les flux apparaîtront ici en temps réel.
+            Aucune transaction pour le moment. Les flux apparaÃ®tront ici en temps rÃ©el.
           </div>
         </section>
       </main>
@@ -450,15 +559,17 @@ function Dashboard() {
           <DialogHeader>
             <DialogTitle className="font-display">
               {phase === "form" && "Nouveau transfert"}
-              {phase === "verifying" && "Vérification en cours"}
+              {phase === "verifying" && "VÃ©rification en cours"}
               {phase === "blocked" && "Transfert suspendu"}
-              {phase === "success" && "Transfert confirmé"}
+              {phase === "documents" && "Justificatifs requis"}
+              {phase === "success" && "Transfert confirmÃ©"}
             </DialogTitle>
             <DialogDescription>
               {phase === "form" && "Envoyez des fonds vers un autre client Valtis ou un IBAN."}
-              {phase === "verifying" && "Notre moteur conformité valide chaque étape en temps réel."}
-              {phase === "blocked" && "Une étape de conformité requiert votre attention."}
-              {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
+              {phase === "verifying" && "Notre moteur conformitÃ© valide chaque Ã©tape en temps rÃ©el."}
+              {phase === "blocked" && "Une Ã©tape de conformitÃ© requiert votre attention."}
+              {phase === "documents" && "Le motif dÃ©clarÃ© nÃ©cessite des documents complÃ©mentaires avant finalisation."}
+              {phase === "success" && "Toutes les vÃ©rifications ont Ã©tÃ© franchies avec succÃ¨s."}
             </DialogDescription>
           </DialogHeader>
 
@@ -471,7 +582,7 @@ function Dashboard() {
                 <SelectContent>
                   {(wallets ?? []).map((w) => (
                     <SelectItem key={w.id} value={w.id}>
-                      {w.label} · {formatAmount(Number(w.balance), w.currency, ghost)}
+                      {w.label} Â· {formatAmount(Number(w.balance), w.currency, ghost)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -486,26 +597,40 @@ function Dashboard() {
               <Input id="amount" type="number" min="0" step="0.01" placeholder="0.00" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ref">Référence (optionnel)</Label>
-              <Input id="ref" placeholder="Motif du virement" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
+              <Label>Motif du virement</Label>
+              <Select value={transferPurpose} onValueChange={setTransferPurpose}>
+                <SelectTrigger><SelectValue placeholder="SÃ©lectionnez un motif" /></SelectTrigger>
+                <SelectContent>
+                  {PURPOSE_OPTIONS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Champ obligatoire â€” certains motifs (ex. objets d'art) dÃ©clenchent une demande de justificatifs.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ref">RÃ©fÃ©rence (optionnel)</Label>
+              <Input id="ref" placeholder="PrÃ©cisions complÃ©mentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={closeTransferDialog}>Annuler</Button>
-              <Button type="submit" variant="gold">Lancer la vérification</Button>
+              <Button type="submit" variant="gold">Lancer la vÃ©rification</Button>
             </DialogFooter>
           </form>
           )}
 
-          {(phase === "verifying" || phase === "blocked" || phase === "success") && (
+          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "success") && (
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs mb-2">
-                  <span className="text-muted-foreground">Progression conformité</span>
-                  <span className={phase === "blocked" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
+                  <span className="text-muted-foreground">Progression conformitÃ©</span>
+                  <span className={phase === "blocked" || phase === "documents" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
                     {Math.round(progress)}%
                   </span>
                 </div>
-                <Progress value={progress} className={phase === "blocked" ? "[&>div]:bg-destructive" : ""} />
+                <Progress value={progress} className={phase === "blocked" || phase === "documents" ? "[&>div]:bg-destructive" : ""} />
               </div>
               <ul className="space-y-2">
                 {steps.map((s) => (
@@ -531,7 +656,7 @@ function Dashboard() {
                     <p className="text-sm text-destructive">{blockReason}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="unlock" className="text-xs">Code de déblocage conformité</Label>
+                    <Label htmlFor="unlock" className="text-xs">Code de dÃ©blocage conformitÃ©</Label>
                     <Input
                       id="unlock"
                       placeholder="VALTIS-XXXX"
@@ -539,13 +664,50 @@ function Dashboard() {
                       onChange={(e) => setUnlockCode(e.target.value)}
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Ce code vous est transmis par votre gestionnaire après revue du dossier EDD.
+                      Ce code vous est transmis par votre gestionnaire aprÃ¨s revue du dossier EDD.
                     </p>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
                     <Button variant="gold" size="sm" onClick={submitUnlock} disabled={unlocking || !unlockCode}>
-                      {unlocking ? "Vérification…" : "Débloquer"}
+                      {unlocking ? "VÃ©rificationâ€¦" : "DÃ©bloquer"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {phase === "documents" && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 space-y-4">
+                  <div className="flex gap-2 items-start">
+                    <Lock className="w-4 h-4 text-destructive mt-0.5" />
+                    <p className="text-sm text-destructive">
+                      Motif Â« {PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label} Â» : justificatifs obligatoires avant de poursuivre au-delÃ  de 82%.
+                    </p>
+                  </div>
+                  {requiredPurposeDocs.map((doc) => (
+                    <div key={doc.code} className="space-y-2">
+                      <Label htmlFor={`doc-${doc.code}`} className="flex items-center gap-1.5 text-xs">
+                        <Download className="w-3.5 h-3.5 rotate-180" /> {doc.label}
+                      </Label>
+                      <Input
+                        id={`doc-${doc.code}`}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) =>
+                          setPurposeFiles((prev) => ({ ...prev, [doc.code]: e.target.files?.[0] ?? null }))
+                        }
+                      />
+                      {purposeFiles[doc.code] && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {purposeFiles[doc.code]!.name} Â· {(purposeFiles[doc.code]!.size / 1024).toFixed(0)} Ko
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="gold" size="sm" onClick={submitPurposeDocuments} disabled={submittingPurposeDocs}>
+                      {submittingPurposeDocs ? "Envoiâ€¦" : "Soumettre les documents"}
                     </Button>
                   </div>
                 </div>
@@ -555,9 +717,9 @@ function Dashboard() {
                 <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm flex gap-2 items-start">
                   <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                   <div>
-                    <p className="font-medium">Virement exécuté</p>
+                    <p className="font-medium">Virement exÃ©cutÃ©</p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Référence : VLT-{Date.now().toString(36).toUpperCase()} — fonds routés vers {transferTo}.
+                      RÃ©fÃ©rence : VLT-{Date.now().toString(36).toUpperCase()} â€” fonds routÃ©s vers {transferTo}.
                     </p>
                   </div>
                 </div>
@@ -592,7 +754,7 @@ function Dashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">Recevoir des fonds</DialogTitle>
-            <DialogDescription>Partagez votre tag Valtis ou vos coordonnées bancaires.</DialogDescription>
+            <DialogDescription>Partagez votre tag Valtis ou vos coordonnÃ©es bancaires.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
             <div className="rounded-xl border border-gold/30 bg-gold/5 p-5 text-center">
@@ -600,7 +762,7 @@ function Dashboard() {
               <p className="font-display text-2xl text-gold-gradient">{valtisTag}</p>
               <Button variant="ghost-gold" size="sm" className="mt-3" onClick={copyTag}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Copié" : "Copier le tag"}
+                {copied ? "CopiÃ©" : "Copier le tag"}
               </Button>
             </div>
             {primaryWallet && (
@@ -612,7 +774,7 @@ function Dashboard() {
               </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              Les fonds reçus sont disponibles immédiatement après contrôle conformité.
+              Les fonds reÃ§us sont disponibles immÃ©diatement aprÃ¨s contrÃ´le conformitÃ©.
             </p>
           </div>
         </DialogContent>
