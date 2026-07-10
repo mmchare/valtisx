@@ -390,6 +390,7 @@ function Dashboard() {
             <Link to="/dashboard" className="text-foreground">Accueil</Link>
             <Link to="/wallets" className="text-muted-foreground hover:text-foreground">Portefeuilles</Link>
             <Link to="/cards" className="text-muted-foreground hover:text-foreground">Cartes</Link>
+            <Link to="/settings" className="text-muted-foreground hover:text-foreground">Moyens de paiement</Link>
             <Link to="/admin" className="text-muted-foreground hover:text-foreground">Admin</Link>
           </nav>
           <div className="flex items-center gap-2">
