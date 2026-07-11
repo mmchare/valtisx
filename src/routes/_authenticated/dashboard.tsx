@@ -109,7 +109,7 @@ function Dashboard() {
   const [transferRef, setTransferRef] = useState("");
   const [transferPurpose, setTransferPurpose] = useState("");
   // Verification simulation state
-  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "success">("form");
+  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "success">("form");
   const [steps, setSteps] = useState<VerifStep[]>([]);
   const [progress, setProgress] = useState(0);
   const [blockReason, setBlockReason] = useState<string | null>(null);
@@ -278,7 +278,19 @@ function Dashboard() {
       setSteps([...list]);
     }
     setProgress(100);
-    if (tId) await supabase.rpc("complete_transfer" as never, { _id: tId } as never);
+    if (tId) {
+      const { error: completeError } = await supabase.rpc("complete_transfer" as never, { _id: tId } as never);
+      if (completeError) {
+        // Le débit n'a PAS eu lieu (ex: KYC du destinataire pas encore approuvé côté serveur).
+        // On ne doit jamais afficher "succès" dans ce cas — le virement finalisera automatiquement
+        // dès que le destinataire sera validé (voir admin_set_kyc_status côté SQL).
+        setBlockReason(
+          "Votre virement est intégralement vérifié de votre côté. Il reste en attente de la validation d'identité du destinataire — il se finalisera automatiquement dès que celle-ci sera complète, sans action supplémentaire de votre part."
+        );
+        setPhase("awaiting_recipient");
+        return;
+      }
+    }
     qc.invalidateQueries({ queryKey: ["wallets"] });
     setPhase("success");
   }
@@ -589,6 +601,7 @@ function Dashboard() {
               {phase === "verifying" && "Vérification en cours"}
               {phase === "blocked" && "Transfert suspendu"}
               {phase === "documents" && "Justificatifs requis"}
+              {phase === "awaiting_recipient" && "En attente du destinataire"}
               {phase === "success" && "Transfert confirmé"}
             </DialogTitle>
             <DialogDescription>
@@ -596,6 +609,7 @@ function Dashboard() {
               {phase === "verifying" && "Notre moteur conformité valide chaque étape en temps réel."}
               {phase === "blocked" && "Une étape de conformité requiert votre attention."}
               {phase === "documents" && "Le motif déclaré nécessite des documents complémentaires avant finalisation."}
+              {phase === "awaiting_recipient" && "Votre parcours est terminé — il ne reste plus qu'une vérification côté destinataire."}
               {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
             </DialogDescription>
           </DialogHeader>
@@ -648,7 +662,7 @@ function Dashboard() {
           </form>
           )}
 
-          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "success") && (
+          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "awaiting_recipient" || phase === "success") && (
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs mb-2">
@@ -736,6 +750,18 @@ function Dashboard() {
                     <Button variant="gold" size="sm" onClick={submitPurposeDocuments} disabled={submittingPurposeDocs}>
                       {submittingPurposeDocs ? "Envoi…" : "Soumettre les documents"}
                     </Button>
+                  </div>
+                </div>
+              )}
+
+              {phase === "awaiting_recipient" && (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+                  <div className="flex gap-2 items-start">
+                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <p className="text-sm">{blockReason}</p>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Fermer</Button>
                   </div>
                 </div>
               )}
