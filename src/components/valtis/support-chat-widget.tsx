@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, X, Send, Loader2, ShieldCheck } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, ShieldCheck, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,10 @@ type Message = {
   body: string;
   created_at: string;
 };
+
+const SUPPORT_WHATSAPP = "+14258776671";
+const SUPPORT_EMAIL = "support@bankvaltis.com";
+const WHATSAPP_LINK = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^\d]/g, "")}`;
 
 export function SupportChatWidget({ userId }: { userId: string | null }) {
   const qc = useQueryClient();
@@ -147,9 +151,27 @@ export function SupportChatWidget({ userId }: { userId: string | null }) {
             </div>
           </ScrollArea>
 
+          <div className="flex items-center gap-2 px-3 pt-2.5 border-t border-border/60 shrink-0">
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-full bg-[#25D366]/10 text-[#128C7E] text-[11px] font-medium hover:bg-[#25D366]/20 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M17.6 6.32A8.86 8.86 0 0 0 12.03 4c-4.8 0-8.7 3.85-8.7 8.6 0 1.52.4 3 1.16 4.3L3.3 21l4.24-1.1a8.8 8.8 0 0 0 4.5 1.22h.01c4.8 0 8.7-3.86 8.7-8.62 0-2.3-.9-4.46-2.55-6.08l-.6.7zm-5.57 13.24h-.01a7.3 7.3 0 0 1-3.7-1.01l-.27-.16-2.75.72.73-2.67-.18-.28a7.15 7.15 0 0 1-1.1-3.84c0-3.94 3.23-7.15 7.29-7.15 1.95 0 3.78.76 5.16 2.14a7.06 7.06 0 0 1 2.13 5.03c0 3.94-3.24 7.15-7.3 7.15h-.01zm4-5.35c-.22-.11-1.3-.64-1.5-.71-.2-.08-.35-.11-.5.11-.14.22-.56.71-.69.85-.13.15-.25.16-.47.05a5.9 5.9 0 0 1-1.73-1.07 6.5 6.5 0 0 1-1.2-1.5c-.13-.21 0-.33.1-.44.1-.1.22-.25.33-.38.11-.13.15-.22.22-.36.07-.15.04-.28-.02-.4-.06-.1-.5-1.22-.7-1.66-.18-.44-.37-.38-.5-.38-.13 0-.28-.02-.43-.02-.15 0-.4.05-.6.28-.22.22-.82.8-.82 1.96 0 1.15.84 2.27.96 2.42.11.15 1.65 2.52 4 3.53.56.24 1 .38 1.33.49.56.18 1.07.15 1.47.1.45-.07 1.3-.53 1.48-1.05.19-.51.19-.95.13-1.05-.06-.1-.2-.15-.42-.26z"/></svg>
+              WhatsApp
+            </a>
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-full bg-secondary text-[11px] font-medium hover:bg-secondary/70 transition-colors"
+            >
+              <Mail className="w-3.5 h-3.5" /> E-mail
+            </a>
+          </div>
+
           <form
             onSubmit={(e) => { e.preventDefault(); void send(); }}
-            className="flex items-center gap-2 p-3 border-t border-border/60 shrink-0"
+            className="flex items-center gap-2 p-3 pt-2 shrink-0"
           >
             <input
               value={draft}
