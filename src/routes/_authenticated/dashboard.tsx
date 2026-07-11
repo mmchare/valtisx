@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download } from "lucide-react";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
@@ -96,6 +97,7 @@ function Dashboard() {
   const { ghost, toggle } = useGhostMode();
   const [userId, setUserId] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [kycOpen, setKycOpen] = useState(false);
   const [transferId, setTransferId] = useState<string | null>(null);
@@ -135,6 +137,21 @@ function Dashboard() {
         .maybeSingle();
       if (error) throw error;
       return data as Profile | null;
+    },
+  });
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId!)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
     },
   });
 
@@ -391,9 +408,25 @@ function Dashboard() {
             <Link to="/wallets" className="text-muted-foreground hover:text-foreground">Portefeuilles</Link>
             <Link to="/cards" className="text-muted-foreground hover:text-foreground">Cartes</Link>
             <Link to="/settings" className="text-muted-foreground hover:text-foreground">Moyens de paiement</Link>
-            <Link to="/admin" className="text-muted-foreground hover:text-foreground">Admin</Link>
+            {isAdmin && <Link to="/admin" className="text-muted-foreground hover:text-foreground">Admin</Link>}
           </nav>
           <div className="flex items-center gap-2">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden" title="Menu">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64">
+                <nav className="flex flex-col gap-1 mt-8 text-sm">
+                  <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Accueil</Link>
+                  <Link to="/wallets" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Portefeuilles</Link>
+                  <Link to="/cards" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Cartes</Link>
+                  <Link to="/settings" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Moyens de paiement</Link>
+                  {isAdmin && <Link to="/admin" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Admin</Link>}
+                </nav>
+              </SheetContent>
+            </Sheet>
             <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
