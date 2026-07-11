@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { AdminRecipientBlocks } from "@/components/valtis/admin-recipient-blocks";
+import { AdminSupportInbox } from "@/components/valtis/admin-support-inbox";
 import { Button } from "@/components/ui/button";
 import { unlockAdmin, isAdminUnlocked, lockAdmin } from "@/lib/admin-gate.functions";
 import {
@@ -580,6 +581,7 @@ function AdminPage({ onLock }: { onLock: () => void }) {
         </p>
 
         <AdminRecipientBlocks />
+        <AdminSupportInbox />
       </main>
 
       {/* Manage user dialog */}

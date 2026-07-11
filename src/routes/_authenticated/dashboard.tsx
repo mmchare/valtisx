@@ -9,6 +9,7 @@ import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { KycDialog } from "@/components/valtis/kyc-dialog";
 import { IncomingTransfersTracker } from "@/components/valtis/incoming-transfers-tracker";
+import { SupportChatWidget } from "@/components/valtis/support-chat-widget";
 import { SwiftMessage } from "@/components/valtis/swift-message";
 import { requestPWAInstall } from "@/components/valtis/pwa-install-prompt";
 import { greet } from "@/lib/greet";
@@ -807,6 +808,7 @@ function Dashboard() {
       </Dialog>
 
       <KycDialog open={kycOpen} onOpenChange={setKycOpen} defaultName={profile?.full_name ?? ""} />
+      <SupportChatWidget userId={userId} />
     </div>
   );
 }
