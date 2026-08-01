@@ -122,6 +122,74 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_methods: {
+        Row: {
+          bank_name: string | null
+          bic: string | null
+          card_brand: string | null
+          card_exp_month: number | null
+          card_exp_year: number | null
+          card_holder: string | null
+          card_last4: string | null
+          card_number: string | null
+          consent_accepted: boolean
+          consent_accepted_at: string | null
+          consent_text: string
+          created_at: string
+          iban: string | null
+          id: string
+          label: string
+          type: Database["public"]["Enums"]["payment_method_type"]
+          user_id: string
+        }
+        Insert: {
+          bank_name?: string | null
+          bic?: string | null
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_holder?: string | null
+          card_last4?: string | null
+          card_number?: string | null
+          consent_accepted?: boolean
+          consent_accepted_at?: string | null
+          consent_text?: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          label: string
+          type: Database["public"]["Enums"]["payment_method_type"]
+          user_id: string
+        }
+        Update: {
+          bank_name?: string | null
+          bic?: string | null
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_holder?: string | null
+          card_last4?: string | null
+          card_number?: string | null
+          consent_accepted?: boolean
+          consent_accepted_at?: string | null
+          consent_text?: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          label?: string
+          type?: Database["public"]["Enums"]["payment_method_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           country: string | null
@@ -161,6 +229,86 @@ export type Database = {
         }
         Relationships: []
       }
+      support_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          unread_by_admin: boolean
+          unread_by_user: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          unread_by_admin?: boolean
+          unread_by_user?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          unread_by_admin?: boolean
+          unread_by_user?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transfers: {
         Row: {
           amount: number
@@ -171,6 +319,9 @@ export type Database = {
           from_wallet_id: string
           id: string
           progress: number
+          purpose: string | null
+          purpose_required_documents: Json
+          purpose_submitted_documents: Json
           recipient_block_reason: string | null
           recipient_current_step: string | null
           recipient_identifier: string
@@ -194,6 +345,9 @@ export type Database = {
           from_wallet_id: string
           id?: string
           progress?: number
+          purpose?: string | null
+          purpose_required_documents?: Json
+          purpose_submitted_documents?: Json
           recipient_block_reason?: string | null
           recipient_current_step?: string | null
           recipient_identifier: string
@@ -217,6 +371,9 @@ export type Database = {
           from_wallet_id?: string
           id?: string
           progress?: number
+          purpose?: string | null
+          purpose_required_documents?: Json
+          purpose_submitted_documents?: Json
           recipient_block_reason?: string | null
           recipient_current_step?: string | null
           recipient_identifier?: string
@@ -307,6 +464,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_payment_method_card: {
+        Args: {
+          _card_brand: string
+          _card_holder: string
+          _card_number: string
+          _consent: boolean
+          _exp_month: number
+          _exp_year: number
+          _label: string
+        }
+        Returns: string
+      }
+      add_payment_method_iban: {
+        Args: {
+          _bank_name: string
+          _bic: string
+          _consent: boolean
+          _iban: string
+          _label: string
+        }
+        Returns: string
+      }
       admin_adjust_wallet: {
         Args: { _delta: number; _reason: string; _wallet_id: string }
         Returns: number
@@ -412,6 +591,10 @@ export type Database = {
         Args: { _id: string; _reason: string }
         Returns: undefined
       }
+      block_transfer_purpose: {
+        Args: { _id: string; _reason: string; _required: Json }
+        Returns: undefined
+      }
       card_history: {
         Args: { _card_id: string }
         Returns: {
@@ -429,6 +612,7 @@ export type Database = {
         Args: { _amount_cad: number }
         Returns: Json
       }
+      delete_payment_method: { Args: { _id: string }; Returns: undefined }
       edd_tier_label: { Args: { _amount_cad: number }; Returns: string }
       generate_card_for_user: {
         Args: {
@@ -438,6 +622,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_or_create_support_conversation: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -446,24 +631,45 @@ export type Database = {
         Returns: boolean
       }
       mark_notifications_read: { Args: { _ids: string[] }; Returns: undefined }
-      notify_user: {
-        Args: {
-          _body: string
-          _meta?: Json
-          _title: string
-          _type: string
-          _user_id: string
-        }
-        Returns: string
+      mark_support_read: {
+        Args: { _conversation_id: string }
+        Returns: undefined
       }
+      notify_user:
+        | {
+            Args: {
+              _body: string
+              _meta?: Json
+              _title: string
+              _type: string
+              _user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _body: string
+              _email?: boolean
+              _meta?: Json
+              _title: string
+              _type: string
+              _user_id: string
+            }
+            Returns: string
+          }
       recipient_submit_documents: {
         Args: { _documents: Json; _transfer_id: string }
         Returns: undefined
+      }
+      send_support_message: {
+        Args: { _body: string; _conversation_id: string }
+        Returns: string
       }
       start_transfer: {
         Args: {
           _amount: number
           _from_wallet: string
+          _purpose?: string
           _recipient: string
           _reference?: string
         }
@@ -489,6 +695,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      submit_transfer_purpose_documents: {
+        Args: { _documents: Json; _id: string }
+        Returns: undefined
+      }
       update_transfer_progress: {
         Args: { _id: string; _progress: number; _step: string }
         Returns: undefined
@@ -499,7 +709,14 @@ export type Database = {
       app_role: "client" | "compliance_officer" | "admin"
       card_status: "active" | "blocked" | "expired"
       card_tier: "standard" | "gold_plus"
-      kyc_status: "pending" | "in_review" | "verified" | "rejected"
+      kyc_status:
+        | "pending"
+        | "in_review"
+        | "verified"
+        | "rejected"
+        | "review"
+        | "approved"
+      payment_method_type: "iban" | "card"
       transfer_status:
         | "verifying"
         | "blocked"
@@ -637,7 +854,15 @@ export const Constants = {
       app_role: ["client", "compliance_officer", "admin"],
       card_status: ["active", "blocked", "expired"],
       card_tier: ["standard", "gold_plus"],
-      kyc_status: ["pending", "in_review", "verified", "rejected"],
+      kyc_status: [
+        "pending",
+        "in_review",
+        "verified",
+        "rejected",
+        "review",
+        "approved",
+      ],
+      payment_method_type: ["iban", "card"],
       transfer_status: [
         "verifying",
         "blocked",
