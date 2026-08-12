@@ -635,28 +635,17 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: undefined
       }
-      notify_user:
-        | {
-            Args: {
-              _body: string
-              _meta?: Json
-              _title: string
-              _type: string
-              _user_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _body: string
-              _email?: boolean
-              _meta?: Json
-              _title: string
-              _type: string
-              _user_id: string
-            }
-            Returns: string
-          }
+      notify_user: {
+        Args: {
+          _body: string
+          _email?: boolean
+          _meta?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
       recipient_submit_documents: {
         Args: { _documents: Json; _transfer_id: string }
         Returns: undefined

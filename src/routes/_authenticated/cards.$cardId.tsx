@@ -100,7 +100,7 @@ function CardDetail() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     toast.success("Déconnecté");
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/auth", search: { mode: "signin" as const }, replace: true });
   }
 
   const isGold = card?.tier === "gold_plus";
