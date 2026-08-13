@@ -1,8 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, ShieldAlert, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { AlertTriangle, ShieldAlert, Info, FileCheck2, Loader2, Clock } from "lucide-react";
 import { SwiftMessage } from "@/components/valtis/swift-message";
 
 type IncomingTransfer = {
@@ -16,6 +19,8 @@ type IncomingTransfer = {
   // Statut du destinataire -- seul blocage qui empeche reellement le credit des fonds.
   recipient_status: string;
   recipient_block_reason: string | null;
+  required_documents: { code: string; label: string }[] | null;
+  submitted_documents: { code: string; label?: string; reference: string }[] | null;
   // Statut cote emetteur -- purement informatif pour le destinataire (aucune action de sa part).
   status: string;
   progress: number;
@@ -48,6 +53,7 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
       const { data, error } = await supabase
         .from("transfers")
         .select("id, amount, currency, created_at, reference, recipient_identifier, sender_id, recipient_status, recipient_block_reason, status, progress, current_step, block_reason")
+
         .eq("recipient_user_id", userId!)
         .in("status", ["verifying", "blocked"])
         .order("created_at", { ascending: false });
