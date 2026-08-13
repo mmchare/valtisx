@@ -16,7 +16,9 @@ import { greet } from "@/lib/greet";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { analyzeTransferPurpose } from "@/lib/purpose-ai.functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
@@ -108,6 +110,8 @@ function Dashboard() {
   const [transferAmount, setTransferAmount] = useState("");
   const [transferRef, setTransferRef] = useState("");
   const [transferPurpose, setTransferPurpose] = useState("");
+  const [transferPurposeDetail, setTransferPurposeDetail] = useState("");
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
   // Verification simulation state
   const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "success">("form");
   const [steps, setSteps] = useState<VerifStep[]>([]);
@@ -203,6 +207,8 @@ function Dashboard() {
     setTransferAmount("");
     setTransferRef("");
     setTransferPurpose("");
+    setTransferPurposeDetail("");
+    setAiNotice(null);
     setPhase("form");
     setSteps([]);
     setProgress(0);
@@ -361,20 +367,28 @@ function Dashboard() {
     if (!transferTo.trim()) return toast.error("Destinataire requis");
     if (!amount || amount <= 0) return toast.error("Montant invalide");
     if (!transferPurpose) return toast.error("Le motif du virement est obligatoire");
+    if (transferPurpose === "autre" && transferPurposeDetail.trim().length < 5) {
+      return toast.error("Décrivez précisément le motif du virement");
+    }
     const w = (wallets ?? []).find((x) => x.id === transferFrom);
     if (!w) return toast.error("Portefeuille introuvable");
     if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
     const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
     const docsNeeded = purposeRequiredDocs(transferPurpose);
     setPurposeDocsNeeded(docsNeeded);
+    setAiNotice(null);
     setPhase("verifying");
+    const purposeLabel =
+      transferPurpose === "autre"
+        ? `Autre motif : ${transferPurposeDetail.trim()}`
+        : PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label ?? transferPurpose;
     // Create the transfer record server-side (notifies sender + recipient if known)
     const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
       _from_wallet: transferFrom,
       _recipient: transferTo.trim(),
       _amount: amount,
       _reference: transferRef || null,
-      _purpose: transferPurpose,
+      _purpose: purposeLabel,
     } as never);
     if (error) {
       toast.error(error.message);
@@ -383,6 +397,31 @@ function Dashboard() {
     }
     const id = (tId as unknown) as string;
     setTransferId(id);
+    // Motif libre : analyse conformité par IA. Si le bien décrit est réglementé,
+    // le destinataire est bloqué à 63% et doit déposer les justificatifs demandés.
+    if (transferPurpose === "autre") {
+      try {
+        const analysis = await analyzeTransferPurpose({
+          data: { description: transferPurposeDetail.trim(), amount, currency: w.currency },
+        });
+        if (analysis.flagged) {
+          const { error: blockError } = await supabase.rpc("apply_ai_recipient_block" as never, {
+            _transfer_id: id,
+            _reason: analysis.reason,
+            _required: analysis.documents,
+          } as never);
+          if (!blockError) {
+            setAiNotice(
+              `Analyse conformité : ${analysis.category}. Le bénéficiaire doit fournir ${analysis.documents.length} justificatif(s) (${analysis.documents
+                .map((d) => d.label)
+                .join(", ")}) avant que les fonds ne soient crédités. Il a été notifié par e-mail.`,
+            );
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
     void runVerification(reason, id, docsNeeded);
   }
 
@@ -651,6 +690,23 @@ function Dashboard() {
                 Champ obligatoire — certains motifs (ex. objets d'art) déclenchent une demande de justificatifs.
               </p>
             </div>
+            {transferPurpose === "autre" && (
+              <div className="space-y-2">
+                <Label htmlFor="purpose-detail">Description du motif</Label>
+                <Textarea
+                  id="purpose-detail"
+                  rows={3}
+                  placeholder="Ex : achat d'un spectre minéral de collection auprès d'un vendeur privé"
+                  value={transferPurposeDetail}
+                  onChange={(e) => setTransferPurposeDetail(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Cette description est analysée par notre moteur de conformité. Si le bien décrit est réglementé
+                  (objets de collection, minéraux, œuvres d'art…), le bénéficiaire devra fournir des justificatifs
+                  (carte de collectionneur, licence d'exportation…) avant le crédit des fonds.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="ref">Référence (optionnel)</Label>
               <Input id="ref" placeholder="Précisions complémentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
@@ -673,6 +729,12 @@ function Dashboard() {
                 </div>
                 <Progress value={progress} className={phase === "blocked" || phase === "documents" ? "[&>div]:bg-destructive" : ""} />
               </div>
+              {aiNotice && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 flex gap-2 items-start">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">{aiNotice}</p>
+                </div>
+              )}
               <ul className="space-y-2">
                 {steps.map((s) => (
                   <li key={s.key} className="flex items-center gap-3 text-sm">
