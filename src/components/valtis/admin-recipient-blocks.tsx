@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ShieldAlert, FileCheck2, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, FileCheck2, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -13,7 +13,8 @@ type Row = {
   recipient_status: string;
   recipient_block_reason: string | null;
   required_documents: { code: string; label: string }[];
-  submitted_documents: { code: string; reference: string }[];
+  submitted_documents: { code: string; label?: string; reference: string }[];
+  purpose: string | null;
   recipient_user_id: string | null;
   sender_id: string;
   created_at: string;
@@ -23,12 +24,18 @@ export function AdminRecipientBlocks() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
+  async function openDocument(path: string) {
+    const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) return toast.error(error?.message ?? "Document introuvable");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   const { data: rows } = useQuery({
     queryKey: ["admin-recipient-blocks"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transfers")
-        .select("id, amount, currency, recipient_progress, recipient_status, recipient_block_reason, required_documents, submitted_documents, recipient_user_id, sender_id, created_at")
+        .select("id, amount, currency, recipient_progress, recipient_status, recipient_block_reason, required_documents, submitted_documents, purpose, recipient_user_id, sender_id, created_at")
         .in("recipient_status", ["blocked", "documents_required", "documents_review", "tier_upgrade_required"])
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -62,7 +69,7 @@ export function AdminRecipientBlocks() {
               <th className="text-left px-3 py-2">Date</th>
               <th className="text-left px-3 py-2">Montant</th>
               <th className="text-left px-3 py-2">Statut</th>
-              <th className="text-left px-3 py-2">Raison</th>
+              <th className="text-left px-3 py-2">Motif / Raison</th>
               <th className="text-left px-3 py-2">Documents</th>
               <th className="text-right px-3 py-2">Action</th>
             </tr>
@@ -77,7 +84,10 @@ export function AdminRecipientBlocks() {
                     {r.recipient_status} · {r.recipient_progress}%
                   </span>
                 </td>
-                <td className="px-3 py-2 text-xs max-w-xs">{r.recipient_block_reason ?? "—"}</td>
+                <td className="px-3 py-2 text-xs max-w-xs">
+                  {r.purpose && <span className="block text-muted-foreground mb-0.5">{r.purpose}</span>}
+                  {r.recipient_block_reason ?? "—"}
+                </td>
                 <td className="px-3 py-2 text-xs">
                   {Array.isArray(r.required_documents) && r.required_documents.length > 0 ? (
                     <div className="space-y-0.5">
@@ -86,7 +96,16 @@ export function AdminRecipientBlocks() {
                         return (
                           <div key={d.code} className="flex items-center gap-1.5">
                             <FileCheck2 className={`w-3 h-3 ${sub ? "text-emerald-500" : "text-muted-foreground"}`} />
-                            <span>{d.label}{sub ? ` · ${sub.reference}` : ""}</span>
+                            <span>{d.label}</span>
+                            {sub && (
+                              <button
+                                type="button"
+                                onClick={() => openDocument(sub.reference)}
+                                className="inline-flex items-center gap-1 text-primary hover:underline"
+                              >
+                                <ExternalLink className="w-3 h-3" /> Examiner
+                              </button>
+                            )}
                           </div>
                         );
                       })}
