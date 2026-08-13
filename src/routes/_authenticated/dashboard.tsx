@@ -690,6 +690,23 @@ function Dashboard() {
                 Champ obligatoire — certains motifs (ex. objets d'art) déclenchent une demande de justificatifs.
               </p>
             </div>
+            {transferPurpose === "autre" && (
+              <div className="space-y-2">
+                <Label htmlFor="purpose-detail">Description du motif</Label>
+                <Textarea
+                  id="purpose-detail"
+                  rows={3}
+                  placeholder="Ex : achat d'un spectre minéral de collection auprès d'un vendeur privé"
+                  value={transferPurposeDetail}
+                  onChange={(e) => setTransferPurposeDetail(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Cette description est analysée par notre moteur de conformité. Si le bien décrit est réglementé
+                  (objets de collection, minéraux, œuvres d'art…), le bénéficiaire devra fournir des justificatifs
+                  (carte de collectionneur, licence d'exportation…) avant le crédit des fonds.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="ref">Référence (optionnel)</Label>
               <Input id="ref" placeholder="Précisions complémentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
