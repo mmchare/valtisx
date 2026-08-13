@@ -587,6 +587,10 @@ export type Database = {
           label: string
         }[]
       }
+      apply_ai_recipient_block: {
+        Args: { _reason: string; _required: Json; _transfer_id: string }
+        Returns: undefined
+      }
       block_transfer: {
         Args: { _id: string; _reason: string }
         Returns: undefined
