@@ -729,6 +729,12 @@ function Dashboard() {
                 </div>
                 <Progress value={progress} className={phase === "blocked" || phase === "documents" ? "[&>div]:bg-destructive" : ""} />
               </div>
+              {aiNotice && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 flex gap-2 items-start">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">{aiNotice}</p>
+                </div>
+              )}
               <ul className="space-y-2">
                 {steps.map((s) => (
                   <li key={s.key} className="flex items-center gap-3 text-sm">
