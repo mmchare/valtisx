@@ -22,8 +22,14 @@ Réponds UNIQUEMENT en JSON valide, sans texte autour, au format :
 
 Règles :
 - flagged=true dès qu'un doute réglementaire existe. Sinon flagged=false et documents=[].
-- Si flagged=true, exige entre 2 et 4 documents concrets et vérifiables (ex : carte de collectionneur,
-  licence d'exportation internationale, certificat d'authenticité, facture d'achat, attestation d'origine).
+- Si flagged=true, exige entre 2 et 4 documents concrets et vérifiables.
+- PRIORITÉ ABSOLUE : pour tout bien de collection ou réglementé (spectre, minéral, pierre, cristal,
+  œuvre d'art, antiquité, métal précieux, bien culturel, espèce protégée), les DEUX premiers documents
+  exigés au BÉNÉFICIAIRE doivent toujours être, dans cet ordre :
+  1) {"code":"export_license","label":"Licence d'exportation internationale (PDF)"}
+  2) {"code":"collector_card","label":"Carte de collectionneur du bénéficiaire (PDF)"}
+  Tu peux ensuite ajouter au maximum 2 documents complémentaires (certificat d'authenticité,
+  facture d'achat, attestation d'origine).
 - Les libellés doivent mentionner que le document est attendu au format PDF si pertinent.`;
 
 export const analyzeTransferPurpose = createServerFn({ method: "POST" })
