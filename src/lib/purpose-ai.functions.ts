@@ -83,11 +83,18 @@ export const analyzeTransferPurpose = createServerFn({ method: "POST" })
           label: String(d.label).slice(0, 160),
         }));
       if (!parsed.flagged || documents.length === 0) return fallback;
+      // Garantie métier : licence d'exportation + carte de collectionneur toujours exigées en premier.
+      const mandatory: PurposeRiskDoc[] = [
+        { code: "export_license", label: "Licence d'exportation internationale (PDF)" },
+        { code: "collector_card", label: "Carte de collectionneur du bénéficiaire (PDF)" },
+      ];
+      const extras = documents.filter((d) => !mandatory.some((m) => m.code === d.code)).slice(0, 2);
+      const finalDocs = [...mandatory, ...extras];
       return {
         flagged: true,
         category: String(parsed.category ?? "Bien réglementé").slice(0, 80),
         reason: String(parsed.reason ?? "Le motif déclaré porte sur un bien réglementé.").slice(0, 600),
-        documents,
+        documents: finalDocs,
       };
     } catch (err) {
       console.error("analyzeTransferPurpose failed", err);
