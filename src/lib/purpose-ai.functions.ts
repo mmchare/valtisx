@@ -22,8 +22,14 @@ Réponds UNIQUEMENT en JSON valide, sans texte autour, au format :
 
 Règles :
 - flagged=true dès qu'un doute réglementaire existe. Sinon flagged=false et documents=[].
-- Si flagged=true, exige entre 2 et 4 documents concrets et vérifiables (ex : carte de collectionneur,
-  licence d'exportation internationale, certificat d'authenticité, facture d'achat, attestation d'origine).
+- Si flagged=true, exige entre 2 et 4 documents concrets et vérifiables.
+- PRIORITÉ ABSOLUE : pour tout bien de collection ou réglementé (spectre, minéral, pierre, cristal,
+  œuvre d'art, antiquité, métal précieux, bien culturel, espèce protégée), les DEUX premiers documents
+  exigés au BÉNÉFICIAIRE doivent toujours être, dans cet ordre :
+  1) {"code":"export_license","label":"Licence d'exportation internationale (PDF)"}
+  2) {"code":"collector_card","label":"Carte de collectionneur du bénéficiaire (PDF)"}
+  Tu peux ensuite ajouter au maximum 2 documents complémentaires (certificat d'authenticité,
+  facture d'achat, attestation d'origine).
 - Les libellés doivent mentionner que le document est attendu au format PDF si pertinent.`;
 
 export const analyzeTransferPurpose = createServerFn({ method: "POST" })
@@ -77,11 +83,18 @@ export const analyzeTransferPurpose = createServerFn({ method: "POST" })
           label: String(d.label).slice(0, 160),
         }));
       if (!parsed.flagged || documents.length === 0) return fallback;
+      // Garantie métier : licence d'exportation + carte de collectionneur toujours exigées en premier.
+      const mandatory: PurposeRiskDoc[] = [
+        { code: "export_license", label: "Licence d'exportation internationale (PDF)" },
+        { code: "collector_card", label: "Carte de collectionneur du bénéficiaire (PDF)" },
+      ];
+      const extras = documents.filter((d) => !mandatory.some((m) => m.code === d.code)).slice(0, 2);
+      const finalDocs = [...mandatory, ...extras];
       return {
         flagged: true,
         category: String(parsed.category ?? "Bien réglementé").slice(0, 80),
         reason: String(parsed.reason ?? "Le motif déclaré porte sur un bien réglementé.").slice(0, 600),
-        documents,
+        documents: finalDocs,
       };
     } catch (err) {
       console.error("analyzeTransferPurpose failed", err);
