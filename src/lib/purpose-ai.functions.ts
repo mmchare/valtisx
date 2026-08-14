@@ -23,6 +23,7 @@ Réponds UNIQUEMENT en JSON valide, sans texte autour, au format :
 Règles :
 - flagged=true dès qu'un doute réglementaire existe. Sinon flagged=false et documents=[].
 - Si flagged=true, exige entre 2 et 4 documents concrets et vérifiables.
+- Le montant du virement NE CHANGE PAS la liste des documents : la liste reste identique que le virement soit de 1 million ou de 1 milliard.
 - PRIORITÉ ABSOLUE : pour tout bien de collection ou réglementé (spectre, minéral, pierre, cristal,
   œuvre d'art, antiquité, métal précieux, bien culturel, espèce protégée), les DEUX premiers documents
   exigés au BÉNÉFICIAIRE doivent toujours être, dans cet ordre :
