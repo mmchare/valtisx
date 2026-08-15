@@ -490,6 +490,10 @@ export type Database = {
         Args: { _delta: number; _reason: string; _wallet_id: string }
         Returns: number
       }
+      admin_cancel_transfer: {
+        Args: { _id: string; _reason: string }
+        Returns: undefined
+      }
       admin_clear_recipient_block: {
         Args: { _transfer_id: string }
         Returns: undefined
