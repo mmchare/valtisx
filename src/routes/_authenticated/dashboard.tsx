@@ -206,6 +206,8 @@ function Dashboard() {
 
   function openTransfer() {
     setTransferFrom(primaryWallet?.id ?? "");
+    cancelledRef.current = false;
+    setCancelling(false);
     setTransferTo("");
     setTransferAmount("");
     setTransferRef("");
