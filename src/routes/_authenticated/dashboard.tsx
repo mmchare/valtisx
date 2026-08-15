@@ -245,6 +245,7 @@ function Dashboard() {
   // afin qu'AUCUN palier ne soit sauté quel que soit le point de départ.
   async function advanceSteps(list: VerifStep[], startIndex: number, reason: string | null, purposeDocs: PurposeDoc[], tId: string | null) {
     for (let i = startIndex; i < list.length; i++) {
+      if (cancelledRef.current) return;
       list[i] = { ...list[i], status: "running" };
       setSteps([...list]);
       const prevPct = i === 0 ? 0 : list[i - 1].pct;
@@ -252,8 +253,10 @@ function Dashboard() {
       const ticks = 14;
       for (let t = 1; t <= ticks; t++) {
         await new Promise((r) => setTimeout(r, 55));
+        if (cancelledRef.current) return;
         setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
       }
+      if (cancelledRef.current) return;
       if (tId) {
         await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: list[i].pct, _step: list[i].key } as never);
       }
