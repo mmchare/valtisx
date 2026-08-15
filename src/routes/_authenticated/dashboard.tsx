@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download, Menu } from "lucide-react";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download, Menu, XCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
@@ -113,7 +113,10 @@ function Dashboard() {
   const [transferPurposeDetail, setTransferPurposeDetail] = useState("");
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   // Verification simulation state
-  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "success">("form");
+  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "cancelled" | "success">("form");
+  // Drapeau d'annulation : consulté par la boucle d'avancement pour stopper la jauge immédiatement.
+  const cancelledRef = useRef(false);
+  const [cancelling, setCancelling] = useState(false);
   const [steps, setSteps] = useState<VerifStep[]>([]);
   const [progress, setProgress] = useState(0);
   const [blockReason, setBlockReason] = useState<string | null>(null);
@@ -203,6 +206,8 @@ function Dashboard() {
 
   function openTransfer() {
     setTransferFrom(primaryWallet?.id ?? "");
+    cancelledRef.current = false;
+    setCancelling(false);
     setTransferTo("");
     setTransferAmount("");
     setTransferRef("");
@@ -242,6 +247,7 @@ function Dashboard() {
   // afin qu'AUCUN palier ne soit sauté quel que soit le point de départ.
   async function advanceSteps(list: VerifStep[], startIndex: number, reason: string | null, purposeDocs: PurposeDoc[], tId: string | null) {
     for (let i = startIndex; i < list.length; i++) {
+      if (cancelledRef.current) return;
       list[i] = { ...list[i], status: "running" };
       setSteps([...list]);
       const prevPct = i === 0 ? 0 : list[i - 1].pct;
@@ -249,8 +255,10 @@ function Dashboard() {
       const ticks = 14;
       for (let t = 1; t <= ticks; t++) {
         await new Promise((r) => setTimeout(r, 55));
+        if (cancelledRef.current) return;
         setProgress(prevPct + ((targetPct - prevPct) * t) / ticks);
       }
+      if (cancelledRef.current) return;
       if (tId) {
         await supabase.rpc("update_transfer_progress" as never, { _id: tId, _progress: list[i].pct, _step: list[i].key } as never);
       }
@@ -450,6 +458,28 @@ function Dashboard() {
     }
   }
 
+  // Annulation par le donneur d'ordre : stoppe la jauge et enregistre l'annulation en base.
+  async function cancelTransfer() {
+    setCancelling(true);
+    cancelledRef.current = true;
+    if (transferId) {
+      const { error } = await supabase.rpc("cancel_transfer" as never, {
+        _id: transferId,
+        _reason: "Annulé par le donneur d'ordre",
+      } as never);
+      if (error) {
+        setCancelling(false);
+        cancelledRef.current = false;
+        return toast.error(error.message);
+      }
+    }
+    setCancelling(false);
+    setBlockReason(null);
+    setPhase("cancelled");
+    qc.invalidateQueries({ queryKey: ["wallets"] });
+    toast.success("Virement annulé", { description: "Aucun débit n'a été effectué." });
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border/40 sticky top-0 z-40 backdrop-blur-sm bg-background/70">
@@ -641,6 +671,7 @@ function Dashboard() {
               {phase === "blocked" && "Transfert suspendu"}
               {phase === "documents" && "Justificatifs requis"}
               {phase === "awaiting_recipient" && "En attente du destinataire"}
+              {phase === "cancelled" && "Virement annulé"}
               {phase === "success" && "Transfert confirmé"}
             </DialogTitle>
             <DialogDescription>
@@ -649,6 +680,7 @@ function Dashboard() {
               {phase === "blocked" && "Une étape de conformité requiert votre attention."}
               {phase === "documents" && "Le motif déclaré nécessite des documents complémentaires avant finalisation."}
               {phase === "awaiting_recipient" && "Votre parcours est terminé — il ne reste plus qu'une vérification côté destinataire."}
+              {phase === "cancelled" && "Vous avez annulé ce virement. Aucun montant n'a été débité."}
               {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
             </DialogDescription>
           </DialogHeader>
@@ -718,17 +750,25 @@ function Dashboard() {
           </form>
           )}
 
-          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "awaiting_recipient" || phase === "success") && (
+          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "awaiting_recipient" || phase === "cancelled" || phase === "success") && (
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-muted-foreground">Progression conformité</span>
-                  <span className={phase === "blocked" || phase === "documents" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
+                  <span className={phase === "blocked" || phase === "documents" || phase === "cancelled" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
                     {Math.round(progress)}%
                   </span>
                 </div>
-                <Progress value={progress} className={phase === "blocked" || phase === "documents" ? "[&>div]:bg-destructive" : ""} />
+                <Progress value={progress} className={phase === "blocked" || phase === "documents" || phase === "cancelled" ? "[&>div]:bg-destructive" : ""} />
               </div>
+              {phase === "verifying" && (
+                <div className="flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                    <XCircle className="w-4 h-4 mr-1.5" />
+                    {cancelling ? "Annulation…" : "Annuler le virement"}
+                  </Button>
+                </div>
+              )}
               {aiNotice && (
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 flex gap-2 items-start">
                   <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
@@ -771,7 +811,9 @@ function Dashboard() {
                     </p>
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="gold" size="sm" onClick={submitUnlock} disabled={unlocking || !unlockCode}>
                       {unlocking ? "Vérification…" : "Débloquer"}
                     </Button>
@@ -808,7 +850,9 @@ function Dashboard() {
                     </div>
                   ))}
                   <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="gold" size="sm" onClick={submitPurposeDocuments} disabled={submittingPurposeDocs}>
                       {submittingPurposeDocs ? "Envoi…" : "Soumettre les documents"}
                     </Button>
@@ -822,10 +866,31 @@ function Dashboard() {
                     <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                     <p className="text-sm">{blockReason}</p>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Fermer</Button>
                   </div>
                 </div>
+              )}
+
+              {phase === "cancelled" && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm flex gap-2 items-start">
+                  <XCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-destructive">Virement annulé</p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      La procédure de conformité a été interrompue à votre demande. Aucun montant n'a été débité de votre portefeuille.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {phase === "cancelled" && (
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeTransferDialog}>Fermer</Button>
+                </DialogFooter>
               )}
 
               {phase === "success" && (
