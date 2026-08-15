@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download, Menu } from "lucide-react";
+import { Eye, EyeOff, LogOut, ArrowUpRight, ArrowDownLeft, Shield, Sparkles, CreditCard, Wallet as WalletIcon, Copy, Check, Loader2, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Download, Menu, XCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
@@ -113,7 +113,10 @@ function Dashboard() {
   const [transferPurposeDetail, setTransferPurposeDetail] = useState("");
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   // Verification simulation state
-  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "success">("form");
+  const [phase, setPhase] = useState<"form" | "verifying" | "blocked" | "documents" | "awaiting_recipient" | "cancelled" | "success">("form");
+  // Drapeau d'annulation : consulté par la boucle d'avancement pour stopper la jauge immédiatement.
+  const cancelledRef = useRef(false);
+  const [cancelling, setCancelling] = useState(false);
   const [steps, setSteps] = useState<VerifStep[]>([]);
   const [progress, setProgress] = useState(0);
   const [blockReason, setBlockReason] = useState<string | null>(null);
