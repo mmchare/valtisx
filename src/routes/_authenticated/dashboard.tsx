@@ -671,6 +671,7 @@ function Dashboard() {
               {phase === "blocked" && "Transfert suspendu"}
               {phase === "documents" && "Justificatifs requis"}
               {phase === "awaiting_recipient" && "En attente du destinataire"}
+              {phase === "cancelled" && "Virement annulé"}
               {phase === "success" && "Transfert confirmé"}
             </DialogTitle>
             <DialogDescription>
@@ -679,6 +680,7 @@ function Dashboard() {
               {phase === "blocked" && "Une étape de conformité requiert votre attention."}
               {phase === "documents" && "Le motif déclaré nécessite des documents complémentaires avant finalisation."}
               {phase === "awaiting_recipient" && "Votre parcours est terminé — il ne reste plus qu'une vérification côté destinataire."}
+              {phase === "cancelled" && "Vous avez annulé ce virement. Aucun montant n'a été débité."}
               {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
             </DialogDescription>
           </DialogHeader>
@@ -748,17 +750,25 @@ function Dashboard() {
           </form>
           )}
 
-          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "awaiting_recipient" || phase === "success") && (
+          {(phase === "verifying" || phase === "blocked" || phase === "documents" || phase === "awaiting_recipient" || phase === "cancelled" || phase === "success") && (
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs mb-2">
                   <span className="text-muted-foreground">Progression conformité</span>
-                  <span className={phase === "blocked" || phase === "documents" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
+                  <span className={phase === "blocked" || phase === "documents" || phase === "cancelled" ? "text-destructive font-semibold" : "text-gold-gradient font-semibold"}>
                     {Math.round(progress)}%
                   </span>
                 </div>
-                <Progress value={progress} className={phase === "blocked" || phase === "documents" ? "[&>div]:bg-destructive" : ""} />
+                <Progress value={progress} className={phase === "blocked" || phase === "documents" || phase === "cancelled" ? "[&>div]:bg-destructive" : ""} />
               </div>
+              {phase === "verifying" && (
+                <div className="flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                    <XCircle className="w-4 h-4 mr-1.5" />
+                    {cancelling ? "Annulation…" : "Annuler le virement"}
+                  </Button>
+                </div>
+              )}
               {aiNotice && (
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 flex gap-2 items-start">
                   <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
@@ -801,7 +811,9 @@ function Dashboard() {
                     </p>
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="gold" size="sm" onClick={submitUnlock} disabled={unlocking || !unlockCode}>
                       {unlocking ? "Vérification…" : "Débloquer"}
                     </Button>
@@ -838,7 +850,9 @@ function Dashboard() {
                     </div>
                   ))}
                   <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Abandonner</Button>
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="gold" size="sm" onClick={submitPurposeDocuments} disabled={submittingPurposeDocs}>
                       {submittingPurposeDocs ? "Envoi…" : "Soumettre les documents"}
                     </Button>
@@ -852,10 +866,31 @@ function Dashboard() {
                     <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                     <p className="text-sm">{blockReason}</p>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={cancelTransfer} disabled={cancelling} className="text-destructive hover:text-destructive">
+                      {cancelling ? "Annulation…" : "Annuler le virement"}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={closeTransferDialog}>Fermer</Button>
                   </div>
                 </div>
+              )}
+
+              {phase === "cancelled" && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm flex gap-2 items-start">
+                  <XCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-destructive">Virement annulé</p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      La procédure de conformité a été interrompue à votre demande. Aucun montant n'a été débité de votre portefeuille.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {phase === "cancelled" && (
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeTransferDialog}>Fermer</Button>
+                </DialogFooter>
               )}
 
               {phase === "success" && (
