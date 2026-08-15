@@ -599,6 +599,10 @@ export type Database = {
         Args: { _id: string; _reason: string; _required: Json }
         Returns: undefined
       }
+      cancel_transfer: {
+        Args: { _id: string; _reason?: string }
+        Returns: undefined
+      }
       card_history: {
         Args: { _card_id: string }
         Returns: {
