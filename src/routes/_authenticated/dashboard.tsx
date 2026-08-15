@@ -458,6 +458,28 @@ function Dashboard() {
     }
   }
 
+  // Annulation par le donneur d'ordre : stoppe la jauge et enregistre l'annulation en base.
+  async function cancelTransfer() {
+    setCancelling(true);
+    cancelledRef.current = true;
+    if (transferId) {
+      const { error } = await supabase.rpc("cancel_transfer" as never, {
+        _id: transferId,
+        _reason: "Annulé par le donneur d'ordre",
+      } as never);
+      if (error) {
+        setCancelling(false);
+        cancelledRef.current = false;
+        return toast.error(error.message);
+      }
+    }
+    setCancelling(false);
+    setBlockReason(null);
+    setPhase("cancelled");
+    qc.invalidateQueries({ queryKey: ["wallets"] });
+    toast.success("Virement annulé", { description: "Aucun débit n'a été effectué." });
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border/40 sticky top-0 z-40 backdrop-blur-sm bg-background/70">
