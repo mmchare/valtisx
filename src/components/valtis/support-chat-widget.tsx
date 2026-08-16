@@ -15,7 +15,7 @@ type Message = {
   created_at: string;
 };
 
-const SUPPORT_WHATSAPP = "+14258776671";
+const SUPPORT_WHATSAPP = "+18254185900";
 const SUPPORT_EMAIL = "support@bankvaltis.com";
 const WHATSAPP_LINK = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^\d]/g, "")}`;
 
