@@ -88,7 +88,7 @@ export function NotificationsBell({ userId }: { userId: string | null }) {
           {(notifs ?? []).map((n) => (
             <div key={n.id} className={`px-4 py-3 ${n.read_at ? "opacity-70" : ""}`}>
               <p className="text-sm font-medium">{n.title}</p>
-              {n.body && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>}
+              {n.body && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed whitespace-pre-wrap break-words">{n.body}</p>}
               <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
                 {new Date(n.created_at).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}
               </p>
