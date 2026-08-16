@@ -166,11 +166,15 @@ export function AdminSupportInbox() {
                 onSubmit={(e) => { e.preventDefault(); void send(); }}
                 className="flex items-center gap-2 p-3 border-t border-border/60 shrink-0"
               >
-                <input
+                <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
+                  }}
+                  rows={1}
                   placeholder="Répondre au client…"
-                  className="flex-1 h-10 rounded-full bg-secondary px-4 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                  className="flex-1 min-h-10 max-h-32 resize-y rounded-2xl bg-secondary px-4 py-2.5 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-primary/40"
                 />
                 <Button type="submit" size="icon" variant="gold" disabled={sending || !draft.trim()} className="rounded-full shrink-0">
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
