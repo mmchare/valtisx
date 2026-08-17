@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Banknote,
 } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { NotificationsBell } from "@/components/valtis/notifications-bell";
@@ -27,6 +28,7 @@ import { AdminTransfers } from "@/components/valtis/admin-transfers";
 import { AdminSupportInbox } from "@/components/valtis/admin-support-inbox";
 import { Button } from "@/components/ui/button";
 import { unlockAdmin, isAdminUnlocked, lockAdmin } from "@/lib/admin-gate.functions";
+import { adminCreateClient } from "@/lib/admin-users.functions";
 import {
   Dialog,
   DialogContent,
@@ -177,6 +179,42 @@ function AdminPage({ onLock }: { onLock: () => void }) {
   const [fundsReason, setFundsReason] = useState("");
   const [fundsDir, setFundsDir] = useState<"credit" | "debit">("credit");
   const [fundsBusy, setFundsBusy] = useState(false);
+  const createClientFn = useServerFn(adminCreateClient);
+  const [newOpen, setNewOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newFullName, setNewFullName] = useState("");
+  const [newSponsor, setNewSponsor] = useState("");
+  const [newBusy, setNewBusy] = useState(false);
+
+  async function submitNewClient() {
+    if (!newEmail || !newPassword || newFullName.trim().length < 2) {
+      return toast.error("Nom complet, e-mail et mot de passe requis");
+    }
+    if (newPassword.length < 8) return toast.error("Mot de passe : 8 caractères minimum");
+    setNewBusy(true);
+    try {
+      const res = await createClientFn({
+        data: {
+          email: newEmail,
+          password: newPassword,
+          fullName: newFullName,
+          sponsorName: newSponsor || undefined,
+        },
+      });
+      toast.success(`Compte créé — n° ${res.accountNumber}. E-mail de bienvenue envoyé.`);
+      setNewOpen(false);
+      setNewEmail("");
+      setNewPassword("");
+      setNewFullName("");
+      setNewSponsor("");
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Création impossible");
+    } finally {
+      setNewBusy(false);
+    }
+  }
 
   const { data: fundsWallets } = useQuery({
     queryKey: ["admin-user-wallets", fundsClientId],
@@ -440,6 +478,12 @@ function AdminPage({ onLock }: { onLock: () => void }) {
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{list.length} client{list.length > 1 ? "s" : ""} listé{list.length > 1 ? "s" : ""}.</p>
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => setNewOpen(true)}
+            >
+              <UserPlus className="w-3 h-3" /> Inscrire un client
+            </Button>
             <Button
               size="sm"
               variant="gold"
