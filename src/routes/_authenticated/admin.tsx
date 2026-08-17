@@ -756,6 +756,55 @@ function AdminPage({ onLock }: { onLock: () => void }) {
             <DialogTitle className="font-display flex items-center gap-2">
               <Banknote className="w-5 h-5 text-gold-gradient" /> Ajouter des fonds
             </DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* New client dialog */}
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-primary" /> Inscrire un nouveau client
+            </DialogTitle>
+            <DialogDescription>
+              Le client reçoit par e-mail ses identifiants, son numéro de compte, le code SWIFT Valtis, le WhatsApp du
+              service client et le lien bankvaltis.com.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nc-name">Nom complet</Label>
+              <Input id="nc-name" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="Hervey Loiseau" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nc-email">Adresse e-mail</Label>
+              <Input id="nc-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="client@exemple.com" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nc-pw">Mot de passe par défaut</Label>
+              <Input id="nc-pw" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="8 caractères minimum" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nc-sponsor">Parrain (optionnel)</Label>
+              <Input id="nc-sponsor" value={newSponsor} onChange={(e) => setNewSponsor(e.target.value)} placeholder="Nom du parrain" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOpen(false)} disabled={newBusy}>Annuler</Button>
+            <Button onClick={submitNewClient} disabled={newBusy}>
+              {newBusy ? "Création…" : "Créer le compte & notifier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={false}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-gold-gradient" /> Ajouter des fonds
+            </DialogTitle>
             <DialogDescription>
               Créditez (ou débitez) instantanément le portefeuille d'un client. Opération tracée dans le journal d'audit.
             </DialogDescription>
