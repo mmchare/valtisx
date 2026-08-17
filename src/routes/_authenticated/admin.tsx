@@ -749,17 +749,6 @@ function AdminPage({ onLock }: { onLock: () => void }) {
         </DialogContent>
       </Dialog>
 
-      {/* Quick funds dialog */}
-      <Dialog open={fundsOpen} onOpenChange={setFundsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-gold-gradient" /> Ajouter des fonds
-            </DialogTitle>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-
       {/* New client dialog */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="sm:max-w-md">
@@ -799,7 +788,8 @@ function AdminPage({ onLock }: { onLock: () => void }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={false}>
+      {/* Quick funds dialog */}
+      <Dialog open={fundsOpen} onOpenChange={setFundsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
