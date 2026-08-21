@@ -13,14 +13,12 @@ i18n
       fr: { translation: fr },
       en: { translation: en },
     },
-    fallbackLng: "fr", // langue par défaut si aucune langue détectée/supportée
+    fallbackLng: "fr",
     supportedLngs: ["fr", "en"],
     interpolation: {
-      escapeValue: false, // React échappe déjà le HTML
+      escapeValue: false,
     },
     detection: {
-      // Ordre de détection : d'abord un choix explicite de l'utilisateur (localStorage),
-      // puis les headers du navigateur
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
       lookupLocalStorage: "valtis_lang",
