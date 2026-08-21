@@ -1,0 +1,35 @@
+name: Extract UI strings (FR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_dir:
+        description: "Dossier à scanner"
+        required: false
+        default: "src"
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install parser deps
+        run: npm install --no-save @babel/parser @babel/traverse
+
+      - name: Run extraction
+        run: node scripts/extract-strings.js "${{ github.event.inputs.source_dir }}"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-strings
+          path: |
+            fr.json
+            manifest.json
