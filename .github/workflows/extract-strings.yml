@@ -24,7 +24,7 @@ jobs:
         run: npm install --no-save @babel/parser @babel/traverse
 
       - name: Run extraction
-        run: node scripts/extract-strings.js "${{ github.event.inputs.source_dir }}"
+        run: node scripts/extract-strings.cjs "${{ github.event.inputs.source_dir }}"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
