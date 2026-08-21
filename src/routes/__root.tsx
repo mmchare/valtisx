@@ -21,23 +21,24 @@ import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "../i18n/config";
-
+import i18n from "i18next";
+import { useTranslation } from "react-i18next";
 
 function NotFoundComponent() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">{t("page_not_found")}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{t("the_page_youre_looking_for")}</p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            {t("go_home")}
           </Link>
         </div>
       </div>
@@ -52,15 +53,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("this_page_didnt_load")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("something_went_wrong_on_our")}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -69,13 +68,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {t("try_again")}
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {t("go_home")}
           </a>
         </div>
       </div>
@@ -100,8 +99,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Valtis — Banque privée nouvelle génération" },
       { name: "twitter:description", content: "Gestion de fortune, conformité bancaire et transferts haute sécurité pour le Canada et l'Europe." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiq[...]" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonui[...]" },
     ],
     links: [
       {
@@ -138,8 +137,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // SSR-safe language selection:
+  // - server side: use the i18n instance language (initialized in ../i18n/config)
+  // - client side: prefer the hook-backed language so client changes are reflected
+  const { i18n: i18nHook } = useTranslation();
+  const lang =
+    typeof window === "undefined"
+      ? i18n.language ?? "fr"
+      : i18nHook?.language ?? i18n.language ?? "fr";
+
   return (
-    <html lang="en">
+    <html lang={lang}>
       <head>
         <HeadContent />
       </head>
