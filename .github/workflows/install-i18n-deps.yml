@@ -1,0 +1,28 @@
+name: Install i18n dependencies
+
+# Se déclenche manuellement depuis l'onglet "Actions" du repo GitHub
+on:
+  workflow_dispatch:
+
+jobs:
+  install-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install i18n packages
+        run: npm install i18next react-i18next i18next-browser-languagedetector
+
+      - name: Commit updated package.json and lockfile
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json package-lock.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Add i18next, react-i18next, i18next-browser-languagedetector"
+          git push
