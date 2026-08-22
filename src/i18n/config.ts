@@ -5,25 +5,24 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import fr from "../locales/fr.json";
 import en from "../locales/en.json";
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources: {
-      fr: { translation: fr },
-      en: { translation: en },
-    },
-    fallbackLng: "fr",
-    supportedLngs: ["fr", "en"],
-    lowerCaseLng: true,
-    cleanCode: true,
-    detection: {
-      order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-    },
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+// Avoid re-initialization if already initialized
+if (!i18n.isInitialized) {
+  i18n
+    .use(LanguageDetector)
+    .use(initReactI18next)
+    .init({
+      resources: {
+        fr: { translation: fr },
+        en: { translation: en },
+      },
+      fallbackLng: "fr",
+      supportedLngs: ["fr", "en"],
+      lowerCaseLng: true,
+      cleanCode: true,
+      interpolation: {
+        escapeValue: false,
+      },
+    });
+}
 
 export default i18n;
