@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode, Suspense } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -22,8 +22,7 @@ import "@fontsource/inter-tight/600.css";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
-import "../i18n/config";
-
+import i18n from "../i18n/config";
 
 function NotFoundComponent() {
   return (
@@ -102,8 +101,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Valtis — Banque privée nouvelle génération" },
       { name: "twitter:description", content: "Gestion de fortune, conformité bancaire et transferts haute sécurité pour le Canada et l'Europe." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiqtonui.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonuiq[...]" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7MZQLluK7gPh7RD7gZWAWEcXD8s2/social-images/social-1781985197661-Gemini_Generated_Image_onuiqtonui[...]" },
     ],
     links: [
       {
@@ -153,6 +152,10 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function I18nProvider({ children }: { children: ReactNode }) {
+  return <Suspense fallback={null}>{children}</Suspense>;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { i18n } = useTranslation();
@@ -162,8 +165,8 @@ function RootComponent() {
   }, []);
 
   useEffect(() => {
-    const storedLanguage = window.localStorage.getItem("valtis_lang");
-    const browserLanguage = window.navigator.language.toLowerCase().split("-")[0];
+    const storedLanguage = typeof window !== "undefined" ? window.localStorage.getItem("valtis_lang") : null;
+    const browserLanguage = typeof window !== "undefined" ? window.navigator.language.toLowerCase().split("-")[0] : "fr";
     const language = storedLanguage === "en" || storedLanguage === "fr"
       ? storedLanguage
       : browserLanguage === "en"
@@ -171,8 +174,11 @@ function RootComponent() {
       : "fr";
 
     const persistLanguage = (nextLanguage: string) => {
-      window.localStorage.setItem("valtis_lang", nextLanguage === "en" ? "en" : "fr");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("valtis_lang", nextLanguage === "en" ? "en" : "fr");
+      }
     };
+    
     i18n.on("languageChanged", persistLanguage);
     void i18n.changeLanguage(language);
 
@@ -182,17 +188,21 @@ function RootComponent() {
   }, [i18n]);
 
   useEffect(() => {
-    document.documentElement.lang = i18n.resolvedLanguage === "en" ? "en" : "fr";
+    if (typeof window !== "undefined") {
+      document.documentElement.lang = i18n.resolvedLanguage === "en" ? "en" : "fr";
+    }
   }, [i18n.resolvedLanguage]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="fixed bottom-4 right-4 z-[60]">
-        <LanguageSwitcher />
-      </div>
-      <Outlet key={i18n.resolvedLanguage} />
-      <Toaster />
-      <PWAInstallPrompt />
-    </QueryClientProvider>
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="fixed bottom-4 right-4 z-[60]">
+          <LanguageSwitcher />
+        </div>
+        <Outlet key={i18n.resolvedLanguage} />
+        <Toaster />
+        <PWAInstallPrompt />
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }
