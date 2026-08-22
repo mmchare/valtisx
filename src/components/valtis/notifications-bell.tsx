@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTranslation } from "react-i18next";
 
 type Notif = {
   id: string;
@@ -20,6 +21,7 @@ type Notif = {
 
 export function NotificationsBell({ userId }: { userId: string | null }) {
   const qc = useQueryClient();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const { data: notifs } = useQuery({
@@ -74,15 +76,15 @@ export function NotificationsBell({ userId }: { userId: string | null }) {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border/40">
-          <p className="text-sm font-medium">Notifications</p>
+          <p className="text-sm font-medium">{t("notifications")}</p>
           <p className="text-[11px] text-muted-foreground">
-            {unread > 0 ? `${unread} non lue${unread > 1 ? "s" : ""}` : "À jour"}
+            {unread > 0 ? t("notifications_non_lues", { count: unread }) : t("a_jour")}
           </p>
         </div>
         <div className="max-h-96 overflow-y-auto divide-y divide-border/40">
           {(notifs ?? []).length === 0 && (
             <p className="px-4 py-8 text-center text-xs text-muted-foreground">
-              Aucune notification pour le moment.
+              {t("aucune_notification_pour_le_moment")}
             </p>
           )}
           {(notifs ?? []).map((n) => (

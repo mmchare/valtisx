@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 export function KycDialog({
   open,
@@ -32,6 +33,7 @@ export function KycDialog({
   defaultName?: string | null;
 }) {
   const qc = useQueryClient();
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState(defaultName ?? "");
   const [country, setCountry] = useState("CA");
   const [docType, setDocType] = useState("passport");
@@ -42,18 +44,18 @@ export function KycDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!fullName.trim() || !docNumber.trim()) {
-      return toast.error("Nom complet et numéro de document requis");
+      return toast.error(t("nom_document_requis"));
     }
     if (!file) {
-      return toast.error("Merci d'uploader une photo/scan de votre pièce d'identité");
+      return toast.error(t("piece_identite_requise"));
     }
     if (file.size > 8 * 1024 * 1024) {
-      return toast.error("Fichier trop lourd (max 8 Mo)");
+      return toast.error(t("fichier_trop_lourd"));
     }
     setSubmitting(true);
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    if (!uid) { setSubmitting(false); return toast.error("Session expirée"); }
+    if (!uid) { setSubmitting(false); return toast.error(t("session_expiree")); }
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
     const path = `${uid}/kyc-${Date.now()}.${ext}`;
     const up = await supabase.storage.from("kyc-documents").upload(path, file, {
@@ -70,8 +72,8 @@ export function KycDialog({
     } as never);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Dossier KYC soumis", {
-      description: "Un administrateur validera votre dossier sous peu.",
+    toast.success(t("dossier_kyc_soumis"), {
+      description: t("administrateur_validera_dossier"),
     });
     qc.invalidateQueries({ queryKey: ["profile"] });
     onOpenChange(false);
@@ -82,62 +84,61 @@ export function KycDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" /> Vérification KYC
+            <ShieldCheck className="w-5 h-5 text-primary" /> {t("verification_kyc")}
           </DialogTitle>
           <DialogDescription>
-            Soumettez vos informations pour activer votre carte standard et lever
-            les restrictions sur vos virements.
+            {t("soumettez_vos_informations_pour_activer")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="kyc-name">Nom légal complet</Label>
+            <Label htmlFor="kyc-name">{t("nom_legal_complet")}</Label>
             <Input
               id="kyc-name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Prénom Nom"
+              placeholder={t("prenom_nom")}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Pays</Label>
+              <Label>{t("pays")}</Label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CA">Canada</SelectItem>
-                  <SelectItem value="FR">France</SelectItem>
-                  <SelectItem value="US">États-Unis</SelectItem>
-                  <SelectItem value="CH">Suisse</SelectItem>
-                  <SelectItem value="BE">Belgique</SelectItem>
-                  <SelectItem value="LU">Luxembourg</SelectItem>
+                  <SelectItem value="FR">{t("france")}</SelectItem>
+                  <SelectItem value="US">{t("etats-unis")}</SelectItem>
+                  <SelectItem value="CH">{t("suisse")}</SelectItem>
+                  <SelectItem value="BE">{t("belgique")}</SelectItem>
+                  <SelectItem value="LU">{t("luxembourg")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Type de document</Label>
+              <Label>{t("type_de_document")}</Label>
               <Select value={docType} onValueChange={setDocType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="passport">Passeport</SelectItem>
-                  <SelectItem value="id_card">Carte d'identité</SelectItem>
-                  <SelectItem value="driver_license">Permis de conduire</SelectItem>
+                  <SelectItem value="passport">{t("passeport")}</SelectItem>
+                  <SelectItem value="id_card">{t("carte_didentite")}</SelectItem>
+                  <SelectItem value="driver_license">{t("permis_de_conduire")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="kyc-doc">Numéro du document</Label>
+            <Label htmlFor="kyc-doc">{t("numero_du_document")}</Label>
             <Input
               id="kyc-doc"
               value={docNumber}
               onChange={(e) => setDocNumber(e.target.value)}
-              placeholder="ex. AB1234567"
+              placeholder={t("ex_ab1234567")}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="kyc-file" className="flex items-center gap-1.5">
-              <Upload className="w-3.5 h-3.5" /> Pièce d'identité (photo ou scan)
+              <Upload className="w-3.5 h-3.5" /> {t("piece_didentite_photo_ou_scan")}
             </Label>
             <Input
               id="kyc-file"
@@ -152,15 +153,14 @@ export function KycDialog({
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            En soumettant ce dossier, vous autorisez Valtis à transmettre ces
-            informations à sa cellule conformité aux fins de vérification.
+            {t("en_soumettant_ce_dossier_vous")}
           </p>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Annuler
+              {t("annuler")}
             </Button>
             <Button type="submit" variant="gold" disabled={submitting}>
-              {submitting ? "Envoi…" : "Soumettre"}
+              {submitting ? t("envoi") : t("soumettre")}
             </Button>
           </DialogFooter>
         </form>

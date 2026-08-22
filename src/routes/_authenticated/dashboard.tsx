@@ -202,7 +202,7 @@ function Dashboard() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("impossible_de_copier"));
     }
   }
 
@@ -537,19 +537,19 @@ function Dashboard() {
             <div className="flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-gold-gradient mt-0.5" />
               <div>
-                <p className="text-sm font-medium">
-                  Vérification KYC {profile.kyc_status === "review" ? "en cours d'examen" : "requise"}
+                    <p className="text-sm font-medium">
+                  {t("verification_kyc")} {profile.kyc_status === "review" ? t("en_cours_examen") : t("requise")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xl">
                   {profile.kyc_status === "review"
-                    ? "Votre dossier a été reçu. Un administrateur va le valider, votre carte standard sera alors activée automatiquement."
-                    : "Soumettez votre dossier KYC pour activer votre carte standard et lever les restrictions sur vos virements."}
+                    ? t("dossier_recu_validation_admin")
+                    : t("soumettez_votre_dossier_kyc")}
                 </p>
               </div>
             </div>
             {profile.kyc_status !== "review" && (
               <Button variant="gold" onClick={() => setKycOpen(true)}>
-                <ShieldCheck className="w-4 h-4" /> Soumettre mon KYC
+                <ShieldCheck className="w-4 h-4" /> {t("soumettre_mon_kyc")}
               </Button>
             )}
           </div>
@@ -557,21 +557,21 @@ function Dashboard() {
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Patrimoine global</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">{t("patrimoine_global")}</p>
             <h1 className="font-display text-5xl font-semibold tracking-tight">
               {formatAmount(totalCad, "CAD", ghost)}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {greet(profile?.full_name, profile?.email)} · Statut KYC :{" "}
+              {greet(profile?.full_name, profile?.email)} {t("statut_kyc")} {" "}
               <span className="text-primary capitalize">{profile?.kyc_status ?? "pending"}</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="gold" onClick={openTransfer}>
-              <ArrowUpRight className="w-4 h-4" /> Nouveau transfert
+              <ArrowUpRight className="w-4 h-4" /> {t("nouveau_transfert")}
             </Button>
             <Button variant="ghost-gold" onClick={() => setReceiveOpen(true)}>
-              <ArrowDownLeft className="w-4 h-4" /> Recevoir
+              <ArrowDownLeft className="w-4 h-4" /> {t("recevoir")}
             </Button>
           </div>
         </div>
@@ -580,29 +580,29 @@ function Dashboard() {
           <Link to="/wallets" className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition">
             <WalletIcon className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium">Portefeuilles</p>
-              <p className="text-[11px] text-muted-foreground">Vos comptes multi-devises</p>
+              <p className="text-sm font-medium">{t("portefeuilles")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("vos_comptes_multi-devises")}</p>
             </div>
           </Link>
           <Link to="/cards" className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition">
             <CreditCard className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium">Mes cartes</p>
-              <p className="text-[11px] text-muted-foreground">Standard & Gold Plus</p>
+              <p className="text-sm font-medium">{t("mes_cartes")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("standard_gold_plus")}</p>
             </div>
           </Link>
           <button onClick={openTransfer} className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition text-left">
             <ArrowUpRight className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium">Envoyer</p>
-              <p className="text-[11px] text-muted-foreground">Transfert sécurisé</p>
+              <p className="text-sm font-medium">{t("envoyer")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("transfert_securise")}</p>
             </div>
           </button>
           <button onClick={() => setReceiveOpen(true)} className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-4 hover:border-primary/40 hover:bg-surface/60 transition text-left">
             <ArrowDownLeft className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium">Recevoir</p>
-              <p className="text-[11px] text-muted-foreground">Partagez votre tag</p>
+              <p className="text-sm font-medium">{t("recevoir")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("partagez_votre_tag")}</p>
             </div>
           </button>
         </section>
@@ -610,7 +610,7 @@ function Dashboard() {
         <IncomingTransfersTracker userId={userId} />
 
         <section>
-          <h2 className="font-display text-xl mb-5 text-muted-foreground">Vos portefeuilles</h2>
+          <h2 className="font-display text-xl mb-5 text-muted-foreground">{t("vos_portefeuilles")}</h2>
           <div className="grid md:grid-cols-2 gap-5">
             {(wallets ?? []).map((w) => (
               <div key={w.id} className={`${w.is_primary ? "card-premium shimmer-gold" : "card-soft"} rounded-2xl p-6 aspect-[2.2/1] flex flex-col justify-between animate-fade-in-up`}>
@@ -621,7 +621,7 @@ function Dashboard() {
                   </div>
                   {w.is_primary && (
                     <span className="text-[10px] uppercase tracking-widest border border-gold px-2 py-0.5 rounded-full text-gold-gradient">
-                      Gold Plus
+                      {t("gold_plus")}
                     </span>
                   )}
                 </div>
@@ -641,25 +641,25 @@ function Dashboard() {
         <section className="grid md:grid-cols-3 gap-5">
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Shield className="w-5 h-5 text-primary mb-3" />
-            <h3 className="font-display font-semibold mb-1">Conformité active</h3>
-            <p className="text-sm text-muted-foreground">Vos transactions sont surveillées par notre cellule EDD 24/7.</p>
+            <h3 className="font-display font-semibold mb-1">{t("conformite_active")}</h3>
+            <p className="text-sm text-muted-foreground">{t("vos_transactions_sont_surveillees_par")}</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <Sparkles className="w-5 h-5 text-primary mb-3" />
             <h3 className="font-display font-semibold mb-1">Ghost Mode</h3>
-            <p className="text-sm text-muted-foreground">Masquez vos soldes d'un geste pour préserver votre discrétion.</p>
+            <p className="text-sm text-muted-foreground">{t("masquez_vos_soldes_dun_geste")}</p>
           </div>
           <div className="p-6 rounded-xl border border-border bg-surface/40">
             <ArrowUpRight className="w-5 h-5 text-primary mb-3" />
-            <h3 className="font-display font-semibold mb-1">Transferts P2P</h3>
-            <p className="text-sm text-muted-foreground">Bientôt disponible : virements en temps réel avec jauge de progression.</p>
+            <h3 className="font-display font-semibold mb-1">{t("transferts_p2p")}</h3>
+            <p className="text-sm text-muted-foreground">{t("bientot_disponible_virements_en_temps")}</p>
           </div>
         </section>
 
         <section>
-          <h2 className="font-display text-xl mb-5 text-muted-foreground">Activité récente</h2>
+          <h2 className="font-display text-xl mb-5 text-muted-foreground">{t("activite_recente")}</h2>
           <div className="rounded-xl border border-border bg-surface/30 p-12 text-center text-sm text-muted-foreground">
-            Aucune transaction pour le moment. Les flux apparaîtront ici en temps réel.
+            {t("aucune_transaction_pour_le_moment")}
           </div>
         </section>
       </main>
@@ -668,31 +668,31 @@ function Dashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {phase === "form" && "Nouveau transfert"}
-              {phase === "verifying" && "Vérification en cours"}
-              {phase === "blocked" && "Transfert suspendu"}
-              {phase === "documents" && "Justificatifs requis"}
-              {phase === "awaiting_recipient" && "En attente du destinataire"}
-              {phase === "cancelled" && "Virement annulé"}
-              {phase === "success" && "Transfert confirmé"}
+              {phase === "form" && t("nouveau_transfert")}
+              {phase === "verifying" && t("verification_en_cours")}
+              {phase === "blocked" && t("transfert_suspendu")}
+              {phase === "documents" && t("justificatifs_requis")}
+              {phase === "awaiting_recipient" && t("en_attente_destinataire")}
+              {phase === "cancelled" && t("virement_annule")}
+              {phase === "success" && t("transfert_confirme")}
             </DialogTitle>
             <DialogDescription>
-              {phase === "form" && "Envoyez des fonds vers un autre client Valtis ou un IBAN."}
-              {phase === "verifying" && "Notre moteur conformité valide chaque étape en temps réel."}
-              {phase === "blocked" && "Une étape de conformité requiert votre attention."}
-              {phase === "documents" && "Le motif déclaré nécessite des documents complémentaires avant finalisation."}
-              {phase === "awaiting_recipient" && "Votre parcours est terminé — il ne reste plus qu'une vérification côté destinataire."}
-              {phase === "cancelled" && "Vous avez annulé ce virement. Aucun montant n'a été débité."}
-              {phase === "success" && "Toutes les vérifications ont été franchies avec succès."}
+              {phase === "form" && t("envoyez_des_fonds")}
+              {phase === "verifying" && t("moteur_conformite_valide")}
+              {phase === "blocked" && t("etape_conformite_attention")}
+              {phase === "documents" && t("motif_documents_complementaires")}
+              {phase === "awaiting_recipient" && t("parcours_termine_verification_destinataire")}
+              {phase === "cancelled" && t("virement_annule_description")}
+              {phase === "success" && t("verifications_franchies")}
             </DialogDescription>
           </DialogHeader>
 
           {phase === "form" && (
           <form onSubmit={startTransfer} className="space-y-4">
             <div className="space-y-2">
-              <Label>Depuis</Label>
+              <Label>{t("depuis")}</Label>
               <Select value={transferFrom} onValueChange={setTransferFrom}>
-                <SelectTrigger><SelectValue placeholder="Portefeuille source" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("portefeuille_source")} /></SelectTrigger>
                 <SelectContent>
                   {(wallets ?? []).map((w) => (
                     <SelectItem key={w.id} value={w.id}>
@@ -703,51 +703,49 @@ function Dashboard() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="to">Destinataire</Label>
-              <Input id="to" placeholder="@tag valtis ou IBAN" value={transferTo} onChange={(e) => setTransferTo(e.target.value)} />
+              <Label htmlFor="to">{t("destinataire")}</Label>
+              <Input id="to" placeholder={t("tag_valtis_ou_iban")} value={transferTo} onChange={(e) => setTransferTo(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">Montant</Label>
+              <Label htmlFor="amount">{t("montant")}</Label>
               <Input id="amount" type="number" min="0" step="0.01" placeholder="0.00" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Motif du virement</Label>
+              <Label>{t("motif_du_virement")}</Label>
               <Select value={transferPurpose} onValueChange={setTransferPurpose}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un motif" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("selectionnez_un_motif")} /></SelectTrigger>
                 <SelectContent>
                   {PURPOSE_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    <SelectItem key={p.value} value={p.value}>{t(`motif_${p.value}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Champ obligatoire — certains motifs (ex. objets d'art) déclenchent une demande de justificatifs.
+                {t("champ_obligatoire_certains_motifs_ex")}
               </p>
             </div>
             {transferPurpose === "autre" && (
               <div className="space-y-2">
-                <Label htmlFor="purpose-detail">Description du motif</Label>
+                <Label htmlFor="purpose-detail">{t("description_du_motif")}</Label>
                 <Textarea
                   id="purpose-detail"
                   rows={3}
-                  placeholder="Ex : achat d'un spectre minéral de collection auprès d'un vendeur privé"
+                  placeholder={t("ex_achat_dun_spectre_mineral")}
                   value={transferPurposeDetail}
                   onChange={(e) => setTransferPurposeDetail(e.target.value)}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Cette description est analysée par notre moteur de conformité. Si le bien décrit est réglementé
-                  (objets de collection, minéraux, œuvres d'art…), le bénéficiaire devra fournir des justificatifs
-                  (carte de collectionneur, licence d'exportation…) avant le crédit des fonds.
+                  {t("cette_description_est_analysee_par")}
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="ref">Référence (optionnel)</Label>
-              <Input id="ref" placeholder="Précisions complémentaires" value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
+              <Label htmlFor="ref">{t("reference_optionnel")}</Label>
+              <Input id="ref" placeholder={t("precisions_complementaires")} value={transferRef} onChange={(e) => setTransferRef(e.target.value)} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={closeTransferDialog}>Annuler</Button>
-              <Button type="submit" variant="gold">Lancer la vérification</Button>
+              <Button type="button" variant="ghost" onClick={closeTransferDialog}>{t("annuler")}</Button>
+              <Button type="submit" variant="gold">{t("lancer_la_verification")}</Button>
             </DialogFooter>
           </form>
           )}
@@ -787,7 +785,7 @@ function Dashboard() {
                       {s.status === "pending" && <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />}
                     </span>
                     <span className={s.status === "pending" ? "text-muted-foreground" : "text-foreground"}>
-                      {s.label}
+                      {t(`step_${s.key}`)}
                     </span>
                     <span className="ml-auto text-[11px] text-muted-foreground">{s.pct}%</span>
                   </li>
@@ -828,13 +826,13 @@ function Dashboard() {
                   <div className="flex gap-2 items-start">
                     <Lock className="w-4 h-4 text-destructive mt-0.5" />
                     <p className="text-sm text-destructive">
-                      Motif « {PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label} » : justificatifs obligatoires avant de poursuivre au-delà de 82%.
+                      {t("motif_justificatifs_obligatoires", { motif: t(`motif_${transferPurpose}`) })}
                     </p>
                   </div>
                   {requiredPurposeDocs.map((doc) => (
                     <div key={doc.code} className="space-y-2">
                       <Label htmlFor={`doc-${doc.code}`} className="flex items-center gap-1.5 text-xs">
-                        <Download className="w-3.5 h-3.5 rotate-180" /> {doc.label}
+                        <Download className="w-3.5 h-3.5 rotate-180" /> {t(`doc_${doc.code}`)}
                       </Label>
                       <Input
                         id={`doc-${doc.code}`}
