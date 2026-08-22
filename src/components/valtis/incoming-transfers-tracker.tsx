@@ -30,7 +30,7 @@ type IncomingTransfer = {
   block_reason: string | null;
 };
 
-type SenderProfile = { id: string; full_name: string | null; email: string };
+type RecipientProfile = { full_name: string | null; email: string };
 
 // Simplification : seul le KYC du destinataire peut reellement bloquer la reception des fonds.
 // Le detail des etapes/blocages cote emetteur reste affiche a titre informatif, pour la clarte,
@@ -94,17 +94,17 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
     },
   });
 
-  const senderIds = [...new Set((incoming ?? []).map((transfer) => transfer.sender_id))];
-  const { data: senders } = useQuery({
-    queryKey: ["incoming-transfer-senders", senderIds],
-    enabled: senderIds.length > 0,
+  const { data: recipient } = useQuery({
+    queryKey: ["incoming-transfer-recipient", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
-        .in("id", senderIds);
+        .select("full_name, email")
+        .eq("id", userId!)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as SenderProfile[];
+      return data as RecipientProfile | null;
     },
   });
 
@@ -134,8 +134,7 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
           const docsRequired = transfer.recipient_status === "documents_required" && required.length > 0;
           const docsReview = transfer.recipient_status === "documents_review";
           const isSpecialArtwork = required.some((document) => document.code === "icom_unesco_registration");
-          const sender = senders?.find((profile) => profile.id === transfer.sender_id);
-          const senderName = sender?.full_name || sender?.email || t("un_emetteur");
+          const recipientName = recipient?.full_name || recipient?.email || t("un_destinataire");
           return (
             <div key={transfer.id} className="rounded-2xl border border-border bg-card p-5 space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -168,7 +167,7 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     {isSpecialArtwork
-                      ? t("art_speciaux_destinataire", { sender: senderName })
+                      ? t("art_speciaux_destinataire", { recipient: recipientName })
                       : transfer.recipient_block_reason || t("justificatifs_requis_avant_credit")}
                   </p>
                   <div>
@@ -241,7 +240,7 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     {isSpecialArtwork
-                      ? t("art_speciaux_destinataire", { sender: senderName })
+                      ? t("art_speciaux_destinataire", { recipient: recipientName })
                       : transfer.recipient_block_reason || t("identite_a_verifier_credit")}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-1 pl-5">
