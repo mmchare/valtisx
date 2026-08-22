@@ -63,6 +63,7 @@ const PURPOSE_OPTIONS: { value: string; label: string }[] = [
   { value: "immobilier", label: "Achat de bien immobilier" },
   { value: "vehicule", label: "Achat de véhicule" },
   { value: "objets_art", label: "Achat d'objets d'art / antiquités" },
+  { value: "art_speciaux", label: "Achat d'objets d'art spéciaux" },
   { value: "investissement", label: "Investissement / placement financier" },
   { value: "entreprise", label: "Investissement professionnel / entreprise" },
   { value: "don_familial", label: "Don familial" },
@@ -78,6 +79,13 @@ function purposeRequiredDocs(purpose: string): PurposeDoc[] {
     return [
       { code: "art_certificate", label: "Certificat d'authenticité de l'œuvre / objet" },
       { code: "art_ownership", label: "Titre de propriété / preuve de possession" },
+    ];
+  }
+  if (purpose === "art_speciaux") {
+    return [
+      { code: "art_special_certificate", label: "Certificat d'authenticité ou d'expertise pour l'objet spécial" },
+      { code: "art_special_appraisal", label: "Évaluation / estimation professionnelle de l'objet" },
+      { code: "art_special_provenance", label: "Document d'origine et de provenance de l'objet" },
     ];
   }
   if (purpose === "immobilier") {
