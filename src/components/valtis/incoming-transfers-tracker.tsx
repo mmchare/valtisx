@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AlertTriangle, ShieldAlert, Info, FileCheck2, Loader2, Clock } from "lucide-react";
 import { SwiftMessage } from "@/components/valtis/swift-message";
+import { useTranslation } from "react-i18next";
 
 type IncomingTransfer = {
   id: string;
@@ -28,61 +29,50 @@ type IncomingTransfer = {
   block_reason: string | null;
 };
 
-const STEP_LABELS: Record<string, string> = {
-  auth: "Authentification renforcée du donneur d'ordre",
-  wallet: "Vérification du portefeuille source",
-  aml: "Contrôle anti-blanchiment (AML / CFT)",
-  benef: "Validation du bénéficiaire & sanctions",
-  edd: "Conformité approfondie (EDD)",
-  reserve: "Réservation des fonds",
-  purpose_docs: "Vérification documentaire du motif de virement",
-  route: "Routage SWIFT / SEPA",
-  confirm: "Confirmation finale",
-};
-
 // Simplification : seul le KYC du destinataire peut reellement bloquer la reception des fonds.
 // Le detail des etapes/blocages cote emetteur reste affiche a titre informatif, pour la clarte,
 // mais ne necessite jamais d'action du destinataire.
 export function IncomingTransfersTracker({ userId }: { userId: string | null }) {
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function submitDocuments(t: IncomingTransfer) {
-    const required = t.required_documents ?? [];
-    const missing = required.filter((d) => !files[`${t.id}:${d.code}`]);
+  async function submitDocuments(transfer: IncomingTransfer) {
+    const required = transfer.required_documents ?? [];
+    const missing = required.filter((d) => !files[`${transfer.id}:${d.code}`]);
     if (missing.length > 0) {
-      return toast.error(`Documents manquants : ${missing.map((d) => d.label).join(", ")}`);
+      return toast.error(t("documents_manquants", { documents: missing.map((d) => d.label).join(", ") }));
     }
-    setBusy(t.id);
+    setBusy(transfer.id);
     const documents: { code: string; label: string; reference: string }[] = [];
     for (const doc of required) {
-      const file = files[`${t.id}:${doc.code}`]!;
+      const file = files[`${transfer.id}:${doc.code}`]!;
       if (file.type !== "application/pdf") {
         setBusy(null);
-        return toast.error(`${doc.label} : le format PDF est obligatoire`);
+        return toast.error(t("format_pdf_obligatoire", { document: doc.label }));
       }
       if (file.size > 8 * 1024 * 1024) {
         setBusy(null);
-        return toast.error(`${doc.label} : fichier trop lourd (max 8 Mo)`);
+        return toast.error(t("fichier_trop_lourd_document", { document: doc.label }));
       }
-      const path = `${userId}/recipient-${t.id}-${doc.code}-${Date.now()}.pdf`;
+      const path = `${userId}/recipient-${transfer.id}-${doc.code}-${Date.now()}.pdf`;
       const up = await supabase.storage
         .from("kyc-documents")
         .upload(path, file, { contentType: "application/pdf", upsert: false });
       if (up.error) {
         setBusy(null);
-        return toast.error(`${doc.label} : ${up.error.message}`);
+        return toast.error(`${doc.label}: ${up.error.message}`);
       }
       documents.push({ code: doc.code, label: doc.label, reference: path });
     }
     const { error } = await supabase.rpc("recipient_submit_documents" as never, {
-      _transfer_id: t.id,
+      _transfer_id: transfer.id,
       _documents: documents,
     } as never);
     setBusy(null);
     if (error) return toast.error(error.message);
-    toast.success("Dossier transmis", { description: "La conformité Valtis examine vos justificatifs." });
+    toast.success(t("dossier_transmis"), { description: t("conformite_examine_justificatifs") });
     qc.invalidateQueries({ queryKey: ["incoming-transfers", userId] });
   }
 
@@ -118,38 +108,38 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
     <section className="space-y-4">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-5 h-5 text-amber-500" />
-        <h2 className="font-display text-xl">Transferts entrants en cours</h2>
+        <h2 className="font-display text-xl">{t("transferts_entrants_en_cours")}</h2>
       </div>
       <div className="grid gap-4">
-        {incoming.map((t) => {
-          const kycBlocked = t.recipient_status === "blocked";
-          const required = t.required_documents ?? [];
-          const docsRequired = t.recipient_status === "documents_required" && required.length > 0;
-          const docsReview = t.recipient_status === "documents_review";
+        {incoming.map((transfer) => {
+          const kycBlocked = transfer.recipient_status === "blocked";
+          const required = transfer.required_documents ?? [];
+          const docsRequired = transfer.recipient_status === "documents_required" && required.length > 0;
+          const docsReview = transfer.recipient_status === "documents_review";
           return (
-            <div key={t.id} className="rounded-2xl border border-border bg-card p-5 space-y-4">
+            <div key={transfer.id} className="rounded-2xl border border-border bg-card p-5 space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Transfert entrant</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t("transfert_entrant")}</p>
                   <p className="font-display text-2xl">
-                    {Number(t.amount).toLocaleString("fr-CA")} {t.currency}
+                    {Number(transfer.amount).toLocaleString(i18n.resolvedLanguage === "en" ? "en-CA" : "fr-CA")} {transfer.currency}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Reçu le {new Date(t.created_at).toLocaleString("fr-CA")}
+                    {t("recu_le")} {new Date(transfer.created_at).toLocaleString(i18n.resolvedLanguage === "en" ? "en-CA" : "fr-CA")}
                   </p>
                 </div>
                 <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded-full border ${
                   kycBlocked || docsRequired || docsReview ? "border-amber-500/40 text-amber-600" : "border-primary/30 text-primary"
                 }`}>
                   {kycBlocked
-                    ? "Votre KYC requis"
+                    ? t("votre_kyc_requis")
                     : docsRequired
-                      ? "Documents requis — 63%"
+                      ? t("documents_requis_pourcentage", { percentage: 63 })
                       : docsReview
-                        ? "En revue conformité — 63%"
-                        : t.status === "blocked"
-                          ? `Émetteur bloqué à ${t.progress}%`
-                          : `En cours — ${t.progress}%`}
+                        ? t("en_revue_conformite_pourcentage", { percentage: 63 })
+                        : transfer.status === "blocked"
+                          ? t("emetteur_bloque_pourcentage", { percentage: transfer.progress })
+                          : t("en_cours_pourcentage", { percentage: transfer.progress })}
                 </span>
               </div>
 
@@ -157,12 +147,12 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 space-y-3">
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    {t.recipient_block_reason ||
-                      "Des justificatifs de conformité sont requis avant le crédit des fonds."}
+                    {transfer.recipient_block_reason ||
+                      t("justificatifs_requis_avant_credit")}
                   </p>
                   <div>
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
-                      <span>Votre parcours conformité</span>
+                      <span>{t("votre_parcours_conformite")}</span>
                       <span>63%</span>
                     </div>
                     <Progress value={63} className="h-1.5 [&>div]:bg-amber-500" />
@@ -171,13 +161,12 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                   {docsReview ? (
                     <p className="text-xs text-muted-foreground flex items-start gap-2">
                       <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                      Dossier complet reçu. Un analyste conformité Valtis examine vos documents depuis le back-office —
-                      les fonds seront crédités dès validation.
+                      {t("dossier_complet_recu_un_analyste")}
                     </p>
                   ) : (
                     <div className="space-y-3">
                       {required.map((d) => {
-                        const key = `${t.id}:${d.code}`;
+                        const key = `${transfer.id}:${d.code}`;
                         return (
                           <div key={d.code} className="space-y-1.5">
                             <Label htmlFor={key} className="text-xs flex items-center gap-1.5">
@@ -197,9 +186,9 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                         );
                       })}
                       <div className="flex justify-end">
-                        <Button size="sm" variant="gold" onClick={() => submitDocuments(t)} disabled={busy === t.id}>
-                          {busy === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCheck2 className="w-3.5 h-3.5" />}
-                          Transmettre mes justificatifs
+                        <Button size="sm" variant="gold" onClick={() => submitDocuments(transfer)} disabled={busy === transfer.id}>
+                          {busy === transfer.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCheck2 className="w-3.5 h-3.5" />}
+                          {t("transmettre_mes_justificatifs")}
                         </Button>
                       </div>
                     </div>
@@ -210,18 +199,18 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
               {/* Bloc informatif : progression cote emetteur, aucune action requise du destinataire */}
               <div className="rounded-xl border border-border/60 bg-secondary/30 p-3">
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
-                  <span className="flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Étape côté donneur d'ordre</span>
-                  <span>{t.progress}%</span>
+                  <span className="flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> {t("etape_cote_donneur_dordre")}</span>
+                  <span>{transfer.progress}%</span>
                 </div>
-                <Progress value={t.progress} className={t.status === "blocked" ? "h-1.5 [&>div]:bg-amber-500" : "h-1.5"} />
+                <Progress value={transfer.progress} className={transfer.status === "blocked" ? "h-1.5 [&>div]:bg-amber-500" : "h-1.5"} />
                 <p className="text-xs text-muted-foreground mt-2">
-                  {t.current_step ? STEP_LABELS[t.current_step] ?? t.current_step : "Vérification en cours."}
-                  {t.status === "blocked" && t.block_reason && (
-                    <span className="block mt-1 text-amber-600">{t.block_reason}</span>
+                  {transfer.current_step ? t(`step_${transfer.current_step}`) : t("verification_en_cours")}
+                  {transfer.status === "blocked" && transfer.block_reason && (
+                    <span className="block mt-1 text-amber-600">{transfer.block_reason}</span>
                   )}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1.5">
-                  Information uniquement — cette étape est gérée par le donneur d'ordre, aucune action requise de votre part.
+                  {t("information_uniquement_cette_etape_est")}
                 </p>
               </div>
 
@@ -230,23 +219,23 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5">
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    {t.recipient_block_reason || "Votre identité doit être vérifiée avant que ce transfert ne soit crédité."}
+                    {transfer.recipient_block_reason || t("identite_a_verifier_credit")}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-1 pl-5">
-                    Complétez votre vérification KYC depuis votre tableau de bord — les fonds seront crédités automatiquement dès approbation.
+                    {t("completez_votre_verification_kyc_depuis")}
                   </p>
                 </div>
               )}
 
               <SwiftMessage
                 input={{
-                  transferId: t.id,
-                  amount: Number(t.amount),
-                  currency: t.currency,
-                  createdAt: t.created_at,
-                  senderId: t.sender_id,
-                  recipientIdentifier: t.recipient_identifier,
-                  reference: t.reference,
+                  transferId: transfer.id,
+                  amount: Number(transfer.amount),
+                  currency: transfer.currency,
+                  createdAt: transfer.created_at,
+                  senderId: transfer.sender_id,
+                  recipientIdentifier: transfer.recipient_identifier,
+                  reference: transfer.reference,
                 }}
                 className="mt-1"
               />
