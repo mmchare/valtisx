@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -22,15 +23,15 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-const schema = z.object({
-  email: z.string().trim().email("Adresse e-mail invalide").max(255),
-  password: z.string().min(8, "Au moins 8 caractères").max(128),
-  fullName: z.string().trim().max(100).optional(),
-});
-
 function AuthPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { mode: initialMode } = Route.useSearch();
+  const schema = z.object({
+    email: z.string().trim().email(t("adresse_email_invalide")).max(255),
+    password: z.string().min(8, t("au_moins_8_caracteres")).max(128),
+    fullName: z.string().trim().max(100).optional(),
+  });
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   useEffect(() => {
     setMode(initialMode);
@@ -56,7 +57,7 @@ function AuthPage() {
     e.preventDefault();
     const parsed = schema.safeParse({ email, password, fullName: mode === "signup" ? fullName : undefined });
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Données invalides");
+      toast.error(parsed.error.issues[0]?.message ?? t("donnees_invalides"));
       return;
     }
     setLoading(true);
@@ -71,7 +72,7 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("E-mail de confirmation envoyé.");
+        toast.success(t("email_confirmation_envoye"));
         setStep("check-email");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -79,11 +80,11 @@ function AuthPage() {
           password: parsed.data.password,
         });
         if (error) throw error;
-        toast.success("Connexion réussie.");
+        toast.success(t("connexion_reussie"));
         navigate({ to: "/dashboard" });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur d'authentification";
+      const message = err instanceof Error ? err.message : t("erreur_authentification");
       toast.error(message);
     } finally {
       setLoading(false);
@@ -99,9 +100,9 @@ function AuthPage() {
         options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
       if (error) throw error;
-      toast.success("Nouvel e-mail de confirmation envoyé.");
+      toast.success(t("nouvel_email_confirmation_envoye"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible de renvoyer l'e-mail";
+      const message = err instanceof Error ? err.message : t("impossible_renvoyer_email");
       toast.error(message);
     } finally {
       setResendLoading(false);
@@ -112,7 +113,7 @@ function AuthPage() {
     <div className="min-h-screen flex flex-col">
       <header className="px-6 h-16 flex items-center justify-between max-w-7xl mx-auto w-full">
         <Link to="/" className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> Retour
+          <ArrowLeft className="w-4 h-4" /> {t("retour")}
         </Link>
         <ValtisLogo />
       </header>
@@ -122,17 +123,17 @@ function AuthPage() {
           <div className="text-center mb-10">
             <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">
               {step === "check-email"
-                ? "Vérifiez votre boîte mail"
+                ? t("verifiez_votre_boite_mail")
                 : mode === "signin"
-                ? "Accès privé"
-                : "Ouvrir un compte Valtis"}
+                ? t("acces_prive")
+                : t("ouvrir_un_compte_valtis")}
             </h1>
             <p className="text-sm text-muted-foreground">
               {step === "check-email"
-                ? `Un e-mail de confirmation vient d'être envoyé à ${email}.`
+                ? t("email_confirmation_envoye_a", { email })
                 : mode === "signin"
-                ? "Connectez-vous à votre espace bancaire."
-                : "Quelques secondes pour commencer."}
+                ? t("connectez_vous_a_votre_espace")
+                : t("quelques_secondes_pour_commencer")}
             </p>
           </div>
 
@@ -141,21 +142,21 @@ function AuthPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">Nom complet</Label>
+                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">{t("nom_complet")}</Label>
                   <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-11" />
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">E-mail</Label>
+                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">{t("e-mail")}</Label>
                 <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">Mot de passe</Label>
+                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">{t("mot_de_passe")}</Label>
                 <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11" />
               </div>
               <Button type="submit" variant="gold" className="w-full h-11" disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {mode === "signin" ? "Se connecter" : "Créer mon compte"}
+                {mode === "signin" ? t("se_connecter") : t("creer_mon_compte")}
               </Button>
             </form>
             ) : (
@@ -165,11 +166,10 @@ function AuthPage() {
                     <MailCheck className="w-7 h-7 text-primary" />
                   </div>
                   <p className="text-sm text-foreground">
-                    Ouvrez l'e-mail que nous venons de vous envoyer et cliquez sur le bouton
-                    <span className="font-medium"> « Confirmer mon adresse »</span> pour activer votre compte Valtis.
+                    {t("ouvrez_le-mail_que_nous_venons")} <span className="font-medium">{t("confirmer_mon_adresse")}</span> {t("pour_activer_votre_compte_valtis")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Pensez à vérifier vos courriers indésirables si vous ne le voyez pas dans quelques minutes.
+                    {t("pensez_a_verifier_vos_courriers")}
                   </p>
                 </div>
                 <Button
@@ -180,7 +180,7 @@ function AuthPage() {
                   disabled={resendLoading}
                 >
                   {resendLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Renvoyer l'e-mail de confirmation
+                  {t("renvoyer_le-mail_de_confirmation")}
                 </Button>
                 <div className="flex items-center justify-between text-xs">
                   <button
@@ -188,7 +188,7 @@ function AuthPage() {
                     onClick={() => setStep("credentials")}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    ← Modifier l'e-mail
+                    {t("modifier_le-mail")}
                   </button>
                   <button
                     type="button"
@@ -198,7 +198,7 @@ function AuthPage() {
                     }}
                     className="text-primary hover:underline"
                   >
-                    J'ai confirmé, me connecter
+                    {t("jai_confirme_me_connecter")}
                   </button>
                 </div>
               </div>
@@ -210,14 +210,14 @@ function AuthPage() {
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
             >
-              {mode === "signin" ? "Pas encore client ? Ouvrir un compte" : "Déjà client ? Se connecter"}
+              {mode === "signin" ? t("pas_encore_client_ouvrir_compte") : t("deja_client_se_connecter")}
             </button>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground text-center mt-6">
-            Vos données sont protégées par chiffrement AES-256.<br/>
-            Conformité AMF · FINTRAC · MiCA.
+            {t("vos_donnees_sont_protegees_par")}<br/>
+            {t("conformite_amf_fintrac_mica")}
           </p>
         </div>
       </main>

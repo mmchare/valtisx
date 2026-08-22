@@ -8,6 +8,7 @@ import { NotificationsBell } from "@/components/valtis/notifications-bell";
 import { Button } from "@/components/ui/button";
 import { useGhostMode } from "@/hooks/use-ghost-mode";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/_authenticated/cards")({
   head: () => ({ meta: [{ title: "Mes cartes · Valtis" }] }),
@@ -32,6 +33,7 @@ function formatNumber(n: string) {
 
 function CardsPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { ghost, toggle } = useGhostMode();
   const [userId, setUserId] = useState<string | null>(null);
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
@@ -56,7 +58,7 @@ function CardsPage() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    toast.success("Déconnecté");
+    toast.success(t("deconnecte"));
     navigate({ to: "/auth", search: { mode: "signin" as const }, replace: true });
   }
 
@@ -66,9 +68,9 @@ function CardsPage() {
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <ValtisLogo />
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Accueil</Link>
-            <Link to="/wallets" className="text-muted-foreground hover:text-foreground">Portefeuilles</Link>
-            <Link to="/cards" className="text-foreground">Cartes</Link>
+            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">{t("accueil")}</Link>
+            <Link to="/wallets" className="text-muted-foreground hover:text-foreground">{t("portefeuilles")}</Link>
+            <Link to="/cards" className="text-foreground">{t("cartes")}</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={toggle}>
@@ -84,11 +86,11 @@ function CardsPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-12 space-y-8">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Vos cartes</p>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Cartes Valtis</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">{t("vos_cartes")}</p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight">{t("cartes_valtis")}</h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-lg">
-            Chaque client reçoit une carte <span className="text-foreground">Standard</span> à l'ouverture du compte.
-            La carte <span className="text-gold-gradient">Gold Plus</span> est activée par votre conseiller dès que votre patrimoine atteint 500 000 CAD.
+            {t("chaque_client_recoit_une_carte")} <span className="text-foreground">{t("standard")}</span> {t("a_louverture_du_compte_la")} 
+            <span className="text-gold-gradient">{t("gold_plus")}</span> {t("est_activee_par_votre_conseiller")}
           </p>
         </div>
 
@@ -108,7 +110,7 @@ function CardsPage() {
                   <div>
                     <p className={`text-xs uppercase tracking-[0.25em] ${isGold ? "text-white/60" : "text-muted-foreground"}`}>{c.brand}</p>
                     <p className={`text-[10px] mt-1 uppercase tracking-widest ${isGold ? "text-gold-gradient" : "text-primary"}`}>
-                      {isGold ? "Gold Plus" : "Standard"}
+                      {isGold ? t("gold_plus") : t("standard")}
                     </p>
                   </div>
                   <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${
@@ -116,7 +118,7 @@ function CardsPage() {
                     c.status === "blocked" ? "border-red-500/40 text-red-400" :
                     "border-muted-foreground/30 text-muted-foreground"
                   }`}>
-                    {c.status === "active" ? "Active" : c.status === "blocked" ? "Bloquée" : "Expirée"}
+                    {c.status === "active" ? t("active") : c.status === "blocked" ? t("bloquee") : t("expiree")}
                   </span>
                 </div>
                 <div className="space-y-3">
@@ -125,11 +127,11 @@ function CardsPage() {
                   </p>
                   <div className="flex items-end justify-between gap-4">
                     <div>
-                      <p className={`text-[9px] uppercase tracking-widest ${isGold ? "text-white/50" : "text-muted-foreground"}`}>Titulaire</p>
+                      <p className={`text-[9px] uppercase tracking-widest ${isGold ? "text-white/50" : "text-muted-foreground"}`}>{t("titulaire")}</p>
                       <p className={`text-xs font-medium ${isGold ? "text-white" : "text-foreground"}`}>{c.holder_name.toUpperCase()}</p>
                     </div>
                     <div>
-                      <p className={`text-[9px] uppercase tracking-widest ${isGold ? "text-white/50" : "text-muted-foreground"}`}>Exp.</p>
+                      <p className={`text-[9px] uppercase tracking-widest ${isGold ? "text-white/50" : "text-muted-foreground"}`}>{t("exp")}</p>
                       <p className={`text-xs font-mono ${isGold ? "text-white" : "text-foreground"}`}>
                         {String(c.expiry_month).padStart(2, "0")}/{String(c.expiry_year).slice(-2)}
                       </p>
@@ -143,7 +145,7 @@ function CardsPage() {
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReveal((r) => ({ ...r, [c.id]: !r[c.id] })); }}
                   className={`absolute top-3 right-3 p-1.5 rounded-full transition ${isGold ? "bg-white/10 hover:bg-white/20 text-white" : "bg-muted hover:bg-muted/70 text-muted-foreground"}`}
-                  title={shown ? "Masquer" : "Révéler"}
+                  title={shown ? t("masquer") : t("reveler")}
                 >
                   {shown ? <Lock className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </button>
@@ -156,9 +158,9 @@ function CardsPage() {
           <div className="rounded-xl border border-gold/30 bg-gold/5 p-6 flex items-start gap-4">
             <ShieldCheck className="w-5 h-5 text-gold-gradient mt-0.5" />
             <div>
-              <p className="font-display text-base font-semibold mb-1">Passez à la carte Gold Plus</p>
+              <p className="font-display text-base font-semibold mb-1">{t("passez_a_la_carte_gold")}</p>
               <p className="text-sm text-muted-foreground">
-                L'activation est gérée par votre conseiller Valtis dès que votre patrimoine global atteint 500 000 CAD.
+                {t("lactivation_est_geree_par_votre")}
               </p>
             </div>
           </div>
@@ -167,7 +169,7 @@ function CardsPage() {
         {(cards ?? []).length === 0 && (
           <div className="rounded-xl border border-border bg-surface/30 p-12 text-center text-sm text-muted-foreground">
             <CreditCard className="w-6 h-6 mx-auto mb-3 opacity-60" />
-            Aucune carte trouvée. Contactez votre conseiller.
+            {t("aucune_carte_trouvee_contactez_votre")}
           </div>
         )}
       </main>

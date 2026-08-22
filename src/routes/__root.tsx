@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerPWA } from "@/lib/pwa-register";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAInstallPrompt } from "@/components/valtis/pwa-install-prompt";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 import "@fontsource/inter-tight/400.css";
 import "@fontsource/inter-tight/500.css";
 import "@fontsource/inter-tight/600.css";
@@ -139,7 +141,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
         <HeadContent />
       </head>
@@ -153,14 +155,42 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     registerPWA();
   }, []);
 
+  useEffect(() => {
+    const storedLanguage = window.localStorage.getItem("valtis_lang");
+    const browserLanguage = window.navigator.language.toLowerCase().split("-")[0];
+    const language = storedLanguage === "en" || storedLanguage === "fr"
+      ? storedLanguage
+      : browserLanguage === "en"
+      ? "en"
+      : "fr";
+
+    const persistLanguage = (nextLanguage: string) => {
+      window.localStorage.setItem("valtis_lang", nextLanguage === "en" ? "en" : "fr");
+    };
+    i18n.on("languageChanged", persistLanguage);
+    void i18n.changeLanguage(language);
+
+    return () => {
+      i18n.off("languageChanged", persistLanguage);
+    };
+  }, [i18n]);
+
+  useEffect(() => {
+    document.documentElement.lang = i18n.resolvedLanguage === "en" ? "en" : "fr";
+  }, [i18n.resolvedLanguage]);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <div className="fixed bottom-4 right-4 z-[60]">
+        <LanguageSwitcher />
+      </div>
+      <Outlet key={i18n.resolvedLanguage} />
       <Toaster />
       <PWAInstallPrompt />
     </QueryClientProvider>

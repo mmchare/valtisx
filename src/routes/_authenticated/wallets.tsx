@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ValtisLogo } from "@/components/valtis/logo";
 import { Button } from "@/components/ui/button";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/_authenticated/wallets")({
   head: () => ({ meta: [{ title: "Portefeuilles · Valtis" }] }),
@@ -17,6 +18,7 @@ type Wallet = { id: string; currency: "CAD" | "EUR" | "USD"; balance: number; la
 
 function Wallets() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { ghost, toggle } = useGhostMode();
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -39,7 +41,7 @@ function Wallets() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    toast.success("Déconnecté");
+    toast.success(t("deconnecte"));
     navigate({ to: "/auth", search: { mode: "signin" as const }, replace: true });
   }
 
@@ -49,8 +51,8 @@ function Wallets() {
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <ValtisLogo />
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Accueil</Link>
-            <Link to="/wallets" className="text-foreground">Portefeuilles</Link>
+            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">{t("accueil")}</Link>
+            <Link to="/wallets" className="text-foreground">{t("portefeuilles")}</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={toggle}>
@@ -64,7 +66,7 @@ function Wallets() {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-12">
-        <h1 className="font-display text-4xl font-semibold mb-8">Portefeuilles</h1>
+        <h1 className="font-display text-4xl font-semibold mb-8">{t("portefeuilles")}</h1>
         <div className="space-y-4">
           {(wallets ?? []).map((w) => (
             <div key={w.id} className="card-premium rounded-2xl p-6 flex items-center justify-between">
@@ -74,7 +76,7 @@ function Wallets() {
               </div>
               <div className="text-right">
                 <span className="text-xs uppercase tracking-widest text-primary">{w.currency}</span>
-                {w.is_primary && <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Principal</p>}
+                {w.is_primary && <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{t("principal")}</p>}
               </div>
             </div>
           ))}

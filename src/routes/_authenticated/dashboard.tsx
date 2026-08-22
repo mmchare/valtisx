@@ -22,6 +22,7 @@ import { analyzeTransferPurpose } from "@/lib/purpose-ai.functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useGhostMode, formatAmount } from "@/hooks/use-ghost-mode";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Tableau de bord · Valtis" }] }),
@@ -96,6 +97,7 @@ function purposeRequiredDocs(purpose: string): PurposeDoc[] {
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { ghost, toggle } = useGhostMode();
   const [userId, setUserId] = useState<string | null>(null);
@@ -179,7 +181,7 @@ function Dashboard() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    toast.success("Déconnecté");
+    toast.success(t("deconnecte"));
     navigate({ to: "/auth", search: { mode: "signin" as const }, replace: true });
   }
 
@@ -486,37 +488,37 @@ function Dashboard() {
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <ValtisLogo />
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/dashboard" className="text-foreground">Accueil</Link>
-            <Link to="/wallets" className="text-muted-foreground hover:text-foreground">Portefeuilles</Link>
-            <Link to="/cards" className="text-muted-foreground hover:text-foreground">Cartes</Link>
-            <Link to="/settings" className="text-muted-foreground hover:text-foreground">Moyens de paiement</Link>
-            {isAdmin && <Link to="/admin" className="text-muted-foreground hover:text-foreground">Admin</Link>}
+            <Link to="/dashboard" className="text-foreground">{t("accueil")}</Link>
+            <Link to="/wallets" className="text-muted-foreground hover:text-foreground">{t("portefeuilles")}</Link>
+            <Link to="/cards" className="text-muted-foreground hover:text-foreground">{t("cartes")}</Link>
+            <Link to="/settings" className="text-muted-foreground hover:text-foreground">{t("moyens_de_paiement")}</Link>
+            {isAdmin && <Link to="/admin" className="text-muted-foreground hover:text-foreground">{t("admin")}</Link>}
           </nav>
           <div className="flex items-center gap-2">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden" title="Menu">
+                <Button variant="ghost" size="sm" className="md:hidden" title={t("menu")}>
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
                 <nav className="flex flex-col gap-1 mt-8 text-sm">
-                  <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Accueil</Link>
-                  <Link to="/wallets" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Portefeuilles</Link>
-                  <Link to="/cards" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Cartes</Link>
-                  <Link to="/settings" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Moyens de paiement</Link>
-                  {isAdmin && <Link to="/admin" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">Admin</Link>}
+                  <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">{t("accueil")}</Link>
+                  <Link to="/wallets" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">{t("portefeuilles")}</Link>
+                  <Link to="/cards" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">{t("cartes")}</Link>
+                  <Link to="/settings" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">{t("moyens_de_paiement")}</Link>
+                  {isAdmin && <Link to="/admin" onClick={() => setMobileNavOpen(false)} className="px-3 py-2.5 rounded-lg hover:bg-secondary">{t("admin")}</Link>}
                 </nav>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="sm" onClick={toggle} title="Ghost Mode">
+            <Button variant="ghost" size="sm" onClick={toggle} title={t("ghost_mode")}>
               {ghost ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => requestPWAInstall()}
-              title="Installer l'application"
+              title={t("installer_lapplication")}
               className="hidden sm:inline-flex"
             >
               <Download className="w-4 h-4" />

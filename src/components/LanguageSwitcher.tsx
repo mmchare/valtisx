@@ -1,16 +1,27 @@
 import { useTranslation } from "react-i18next";
+import { Languages } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const language = i18n.resolvedLanguage === "en" ? "en" : "fr";
 
-  const toggleLanguage = () => {
-    const next = i18n.language === "fr" ? "en" : "fr";
-    i18n.changeLanguage(next);
+  async function toggleLanguage() {
+    await i18n.changeLanguage(language === "fr" ? "en" : "fr");
   };
 
   return (
-    <button onClick={toggleLanguage} aria-label="Changer de langue / Change language">
-      {i18n.language === "fr" ? "EN" : "FR"}
-    </button>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={toggleLanguage}
+      aria-label={t("changer_de_langue")}
+      title={t("changer_de_langue")}
+      className="gap-2"
+    >
+      <Languages className="h-4 w-4" aria-hidden="true" />
+      {language === "fr" ? "EN" : "FR"}
+    </Button>
   );
 }
