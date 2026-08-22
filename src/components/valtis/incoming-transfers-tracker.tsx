@@ -25,9 +25,12 @@ type IncomingTransfer = {
   // Statut cote emetteur -- purement informatif pour le destinataire (aucune action de sa part).
   status: string;
   progress: number;
+  recipient_progress: number;
   current_step: string | null;
   block_reason: string | null;
 };
+
+type SenderProfile = { id: string; full_name: string | null; email: string };
 
 // Simplification : seul le KYC du destinataire peut reellement bloquer la reception des fonds.
 // Le detail des etapes/blocages cote emetteur reste affiche a titre informatif, pour la clarte,
@@ -82,12 +85,26 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transfers")
-        .select("id, amount, currency, created_at, reference, recipient_identifier, sender_id, recipient_status, recipient_block_reason, required_documents, submitted_documents, status, progress, current_step, block_reason")
+        .select("id, amount, currency, created_at, reference, recipient_identifier, sender_id, recipient_status, recipient_block_reason, required_documents, submitted_documents, status, progress, recipient_progress, current_step, block_reason")
         .eq("recipient_user_id", userId!)
         .in("status", ["verifying", "blocked"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as IncomingTransfer[];
+    },
+  });
+
+  const senderIds = [...new Set((incoming ?? []).map((transfer) => transfer.sender_id))];
+  const { data: senders } = useQuery({
+    queryKey: ["incoming-transfer-senders", senderIds],
+    enabled: senderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", senderIds);
+      if (error) throw error;
+      return (data ?? []) as SenderProfile[];
     },
   });
 
@@ -116,6 +133,9 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
           const required = transfer.required_documents ?? [];
           const docsRequired = transfer.recipient_status === "documents_required" && required.length > 0;
           const docsReview = transfer.recipient_status === "documents_review";
+          const isSpecialArtwork = required.some((document) => document.code === "icom_unesco_registration");
+          const sender = senders?.find((profile) => profile.id === transfer.sender_id);
+          const senderName = sender?.full_name || sender?.email || t("un_emetteur");
           return (
             <div key={transfer.id} className="rounded-2xl border border-border bg-card p-5 space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -134,9 +154,9 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                   {kycBlocked
                     ? t("votre_kyc_requis")
                     : docsRequired
-                      ? t("documents_requis_pourcentage", { percentage: 63 })
+                      ? t("documents_requis_pourcentage", { percentage: transfer.recipient_progress })
                       : docsReview
-                        ? t("en_revue_conformite_pourcentage", { percentage: 63 })
+                        ? t("en_revue_conformite_pourcentage", { percentage: transfer.recipient_progress })
                         : transfer.status === "blocked"
                           ? t("emetteur_bloque_pourcentage", { percentage: transfer.progress })
                           : t("en_cours_pourcentage", { percentage: transfer.progress })}
@@ -147,15 +167,16 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5 space-y-3">
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    {transfer.recipient_block_reason ||
-                      t("justificatifs_requis_avant_credit")}
+                    {isSpecialArtwork
+                      ? t("art_speciaux_destinataire", { sender: senderName })
+                      : transfer.recipient_block_reason || t("justificatifs_requis_avant_credit")}
                   </p>
                   <div>
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
                       <span>{t("votre_parcours_conformite")}</span>
-                      <span>63%</span>
+                      <span>{transfer.recipient_progress}%</span>
                     </div>
-                    <Progress value={63} className="h-1.5 [&>div]:bg-amber-500" />
+                    <Progress value={transfer.recipient_progress} className="h-1.5 [&>div]:bg-amber-500" />
                   </div>
 
                   {docsReview ? (
@@ -219,7 +240,9 @@ export function IncomingTransfersTracker({ userId }: { userId: string | null }) 
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3.5">
                   <p className="text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    {transfer.recipient_block_reason || t("identite_a_verifier_credit")}
+                    {isSpecialArtwork
+                      ? t("art_speciaux_destinataire", { sender: senderName })
+                      : transfer.recipient_block_reason || t("identite_a_verifier_credit")}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-1 pl-5">
                     {t("completez_votre_verification_kyc_depuis")}

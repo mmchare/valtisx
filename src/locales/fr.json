@@ -91,6 +91,8 @@
   "en_cours_pourcentage": "En cours — {{percentage}}%",
   "justificatifs_requis_avant_credit": "Des justificatifs de conformité sont requis avant le crédit des fonds.",
   "identite_a_verifier_credit": "Votre identité doit être vérifiée avant que ce transfert ne soit crédité.",
+  "un_emetteur": "Un émetteur",
+  "art_speciaux_destinataire": "Achat d'objets d'art spéciaux : {{sender}}, vous devez fournir une preuve d'enregistrement ICOM/UNESCO dans les serveurs internationaux afin de garantir la légalité de la vente. Document requis côté destinataire.",
   "nom_document_requis": "Nom complet et numéro de document requis",
   "piece_identite_requise": "Merci d'uploader une photo/scan de votre pièce d'identité",
   "fichier_trop_lourd": "Fichier trop lourd (max 8 Mo)",
