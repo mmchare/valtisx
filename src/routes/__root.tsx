@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode, Suspense } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -15,7 +15,6 @@ import { registerPWA } from "@/lib/pwa-register";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAInstallPrompt } from "@/components/valtis/pwa-install-prompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useTranslation } from "react-i18next";
 import "@fontsource/inter-tight/400.css";
 import "@fontsource/inter-tight/500.css";
 import "@fontsource/inter-tight/600.css";
@@ -152,21 +151,19 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-function I18nProvider({ children }: { children: ReactNode }) {
-  return <Suspense fallback={null}>{children}</Suspense>;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const { i18n } = useTranslation();
 
   useEffect(() => {
     registerPWA();
   }, []);
 
+  // Language detection & persistence - client-side only
   useEffect(() => {
-    const storedLanguage = typeof window !== "undefined" ? window.localStorage.getItem("valtis_lang") : null;
-    const browserLanguage = typeof window !== "undefined" ? window.navigator.language.toLowerCase().split("-")[0] : "fr";
+    if (typeof window === "undefined") return;
+
+    const storedLanguage = window.localStorage.getItem("valtis_lang");
+    const browserLanguage = window.navigator.language.toLowerCase().split("-")[0];
     const language = storedLanguage === "en" || storedLanguage === "fr"
       ? storedLanguage
       : browserLanguage === "en"
@@ -174,9 +171,7 @@ function RootComponent() {
       : "fr";
 
     const persistLanguage = (nextLanguage: string) => {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("valtis_lang", nextLanguage === "en" ? "en" : "fr");
-      }
+      window.localStorage.setItem("valtis_lang", nextLanguage === "en" ? "en" : "fr");
     };
     
     i18n.on("languageChanged", persistLanguage);
@@ -185,24 +180,21 @@ function RootComponent() {
     return () => {
       i18n.off("languageChanged", persistLanguage);
     };
-  }, [i18n]);
+  }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      document.documentElement.lang = i18n.resolvedLanguage === "en" ? "en" : "fr";
-    }
+    if (typeof window === "undefined") return;
+    document.documentElement.lang = i18n.resolvedLanguage === "en" ? "en" : "fr";
   }, [i18n.resolvedLanguage]);
 
   return (
-    <I18nProvider>
-      <QueryClientProvider client={queryClient}>
-        <div className="fixed bottom-4 right-4 z-[60]">
-          <LanguageSwitcher />
-        </div>
-        <Outlet key={i18n.resolvedLanguage} />
-        <Toaster />
-        <PWAInstallPrompt />
-      </QueryClientProvider>
-    </I18nProvider>
+    <QueryClientProvider client={queryClient}>
+      <div className="fixed bottom-4 right-4 z-[60]">
+        <LanguageSwitcher />
+      </div>
+      <Outlet key={i18n.resolvedLanguage} />
+      <Toaster />
+      <PWAInstallPrompt />
+    </QueryClientProvider>
   );
 }
