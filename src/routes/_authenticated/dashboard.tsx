@@ -246,6 +246,7 @@ function Dashboard() {
     if (!isTag && !isIban) {
       return "Le bénéficiaire n'est pas reconnu (tag Valtis ou IBAN attendu). Le contrôle sanctions et listes PEP a échoué.";
     }
+    if (transferPurpose === "art_speciaux") return null;
     if (amount >= 10000) {
       return "Virement à montant élevé (≥ 10 000). Un code de déblocage conformité (EDD) est obligatoire — contactez votre gestionnaire dédié.";
     }
@@ -392,21 +393,17 @@ function Dashboard() {
     if (!w) return toast.error("Portefeuille introuvable");
     if (amount > Number(w.balance)) return toast.error("Solde insuffisant");
     const reason = evaluateBlockReason(amount, transferTo, profile?.kyc_status ?? "pending");
-    const docsNeeded = purposeRequiredDocs(transferPurpose);
+    const docsNeeded = transferPurpose === "art_speciaux" ? [] : purposeRequiredDocs(transferPurpose);
     setPurposeDocsNeeded(docsNeeded);
     setAiNotice(null);
     setPhase("verifying");
-    const purposeLabel =
-      transferPurpose === "autre"
-        ? `Autre motif : ${transferPurposeDetail.trim()}`
-        : PURPOSE_OPTIONS.find((p) => p.value === transferPurpose)?.label ?? transferPurpose;
     // Create the transfer record server-side (notifies sender + recipient if known)
     const { data: tId, error } = await supabase.rpc("start_transfer" as never, {
       _from_wallet: transferFrom,
       _recipient: transferTo.trim(),
       _amount: amount,
       _reference: transferRef || null,
-      _purpose: purposeLabel,
+      _purpose: transferPurpose,
     } as never);
     if (error) {
       toast.error(error.message);
