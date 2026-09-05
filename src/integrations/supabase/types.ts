@@ -89,6 +89,57 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_rules: {
+        Row: {
+          active: boolean
+          block_percentage: number
+          condition_kind: string
+          created_at: string
+          id: string
+          min_amount_cad: number | null
+          name: string
+          priority: number
+          purpose_code: string | null
+          reason: string
+          required_documents: Json
+          side: string
+          unlock_mode: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          block_percentage?: number
+          condition_kind?: string
+          created_at?: string
+          id?: string
+          min_amount_cad?: number | null
+          name: string
+          priority?: number
+          purpose_code?: string | null
+          reason: string
+          required_documents?: Json
+          side?: string
+          unlock_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          block_percentage?: number
+          condition_kind?: string
+          created_at?: string
+          id?: string
+          min_amount_cad?: number | null
+          name?: string
+          priority?: number
+          purpose_code?: string | null
+          reason?: string
+          required_documents?: Json
+          side?: string
+          unlock_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -308,6 +359,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transfer_purposes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          label_en: string | null
+          label_fr: string
+          requires_detail: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_fr: string
+          requires_detail?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_fr?: string
+          requires_detail?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       transfers: {
         Row: {
@@ -646,6 +733,31 @@ export type Database = {
       mark_support_read: {
         Args: { _conversation_id: string }
         Returns: undefined
+      }
+      match_recipient_rule: {
+        Args: { _amount_cad: number; _purpose: string }
+        Returns: {
+          active: boolean
+          block_percentage: number
+          condition_kind: string
+          created_at: string
+          id: string
+          min_amount_cad: number | null
+          name: string
+          priority: number
+          purpose_code: string | null
+          reason: string
+          required_documents: Json
+          side: string
+          unlock_mode: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "compliance_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       notify_user: {
         Args: {
